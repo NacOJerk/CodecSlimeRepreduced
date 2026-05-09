@@ -83,7 +83,6 @@ class CodecDecoder(nn.Module):
     def forward(self, x, vq=True):
         if vq is True:
             x, q, commit_loss = self.quantizer(x)
-            x = self.model(x)
             return x, q, commit_loss
         x = self.model(x)
         return x
