@@ -8,7 +8,7 @@ CONFIG_NAME=${1:-codecslime_vq8k}
 RUN_NAME=${2:-smoke-${CONFIG_NAME}}
 
 source /home/morg/students/dortirosh/envs/codecslime/bin/activate
-export PYTHONPATH=$BIGCODEC:$PYTHONPATH
+export PYTHONPATH=$BIGCODEC:${PYTHONPATH:-}
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 
 # Build filelists if not yet built (smoke needs at least a few hundred utterances)

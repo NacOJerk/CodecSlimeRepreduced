@@ -12,7 +12,7 @@ BIGCODEC=$REPO/external/BigCodec
 LOG_DIR=$REPO/backbones/checkpoints/$RUN
 
 source /home/morg/students/dortirosh/envs/codecslime/bin/activate
-export PYTHONPATH=$BIGCODEC:$PYTHONPATH
+export PYTHONPATH=$BIGCODEC:${PYTHONPATH:-}
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 
 mkdir -p "$LOG_DIR"
