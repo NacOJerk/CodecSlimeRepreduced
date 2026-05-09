@@ -5,8 +5,8 @@ def main():
     dfr = SchedDFR(down_sample_ratio=2, max_compression=4)
     T = 4
     d_h = 2
-    fake_output = np.random.rand(T, d_h)
-    encoded_output = dfr.down_sample(fake_output)
+    fake_output = np.ones((T, d_h))
+    encoded_output = dfr.optimal_down_sample(fake_output)
     decoded_output = dfr.up_sample(encoded_output)
 
     print(fake_output)

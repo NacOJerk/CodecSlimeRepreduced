@@ -21,7 +21,20 @@ class SchedDFR:
         l2_norms = np.linalg.norm(segment - segment_mean, ord=2, axis=-1)
         return float(np.sum(l2_norms))
 
-    def down_sample(self, raw_output: np.ndarray) -> EncodedData:
+    @staticmethod
+    def _down_sample(raw_output: np.ndarray, encoding_lengths: List[int]) -> np.ndarray:
+        compressed_features = []
+        current_start = 0
+        for s in encoding_lengths:
+            current_end = current_start + s
+            segment = raw_output[current_start:current_end]
+            segment_mean = np.mean(segment, axis=0)
+            compressed_features.append(segment_mean)
+            current_start = current_end        
+
+        return np.array(compressed_features)
+
+    def optimal_down_sample(self, raw_output: np.ndarray) -> EncodedData:
         t, _ = raw_output.shape
         t_tag = np.ceil(t / self.down_sample_ratio).astype(int)
         optiaml_distance = [[-np.inf for _ in range(t_tag + 1)] for _ in range(t + 1)]
@@ -51,17 +64,8 @@ class SchedDFR:
         final_s_choices.reverse()
 
         assert sum(final_s_choices) == t, f"Invalid encoding ({final_s_choices} vs t={t})"
-
-        compressed_features = []
-        current_start = 0
-        for s in final_s_choices:
-            current_end = current_start + s
-            segment = raw_output[current_start:current_end]
-            segment_mean = np.mean(segment, axis=0)
-            compressed_features.append(segment_mean)
-            current_start = current_end        
     
-        return EncodedData(compressed_features, final_s_choices)
+        return EncodedData(SchedDFR._down_sample(raw_output, final_s_choices), final_s_choices)
     
     def up_sample(self, encoded_output: EncodedData) -> np.ndarray:
         return np.repeat(encoded_output.encoded_data, encoded_output.encoding_lengths, axis=0)
