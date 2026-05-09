@@ -1,4 +1,7 @@
-from typing import List
+import numpy as np
+from typing import List, Optional
+
+USE_PAPER_D_ENFORCE = False
 
 class MeltManager:
     def __init__(self, 
@@ -31,7 +34,7 @@ class MeltManager:
             raise ValueError("Target compression probabilities length doesn't match max compression")
         if sum(p_tgt) != 1:
             raise ValueError("Target compression probabilities must sum to 1")
-        self.p_tgt = p_tgt
+        self.p_tgt = np.array(p_tgt)
         
         self.s_p = s_p
         self.concentration_control = concentration_control
@@ -42,3 +45,23 @@ class MeltManager:
         self.epsilon = epsilon
         
         self._current_training_step: int = 0
+    
+    def generate_segment_lenght_propotations(self, increase_step=True) -> Optional[List[float]]:
+        if np.random.uniform() < self.skip_prob:
+            return
+        
+        training_progress = min(self._current_training_step / self.s_p, 1)
+        current_prop = training_progress * self.p_tgt
+        if USE_PAPER_D_ENFORCE:
+            current_prop[-1] = 1 - np.sum(current_prop[:-1]) # The paper had this so the probablity of 4 is the most likely, this feels like a mistake 
+        else:
+            current_prop[0] = 1 - np.sum(current_prop[1:]) 
+        current_prop = np.maximum(current_prop, self.epsilon)
+
+        alpha = current_prop * self.concentration_control / (max(1, self._current_training_step / self.s_p)**2.5)
+        propoption = np.random.dirichlet(alpha)
+
+        if increase_step:
+            self._current_training_step += 1
+
+        return propoption
