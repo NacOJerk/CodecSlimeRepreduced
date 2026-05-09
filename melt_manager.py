@@ -4,6 +4,7 @@ from typing import List, Optional
 from sched_dfr import SchedDFR
 
 USE_PAPER_D_ENFORCE = False
+INCLUDE_SKIP_AS_STEP = True
 
 class MeltManager:
     def __init__(self, 
@@ -50,6 +51,8 @@ class MeltManager:
     
     def generate_segment_lenght_propotations(self, increase_step=True) -> Optional[List[float]]:
         if np.random.uniform() < self.skip_prob:
+            if INCLUDE_SKIP_AS_STEP and increase_step:
+                self._current_training_step += 1
             return
         
         training_progress = min(self._current_training_step / self.s_p, 1)
