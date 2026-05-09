@@ -88,3 +88,8 @@ class MeltManager:
         
         np.random.shuffle(segments)
         return SchedDFR.up_sample(SchedDFR.down_sample(raw, segments), segments)
+    
+    def random_down_sample_with_proption_multi(self, raw: np.ndarray, propoption: List[float]) -> np.ndarray:
+        results = [self.random_down_sample_with_propotion(raw[i], propoption) for i in range(raw.shape[0])]
+        results = np.array(results)
+        return results

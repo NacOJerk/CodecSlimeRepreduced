@@ -4,15 +4,15 @@ from melt_manager import MeltManager
 
 def main():
     dfr = SchedDFR(down_sample_ratio=2, max_compression=4)
-    T = 40
+    T = 8
     d_h = 2
-    fake_output = np.random.rand(*(T, d_h))
-    encoded_output = dfr.optimal_down_sample(fake_output)
-    decoded_output = dfr.up_sample_encoded(encoded_output)
+    fake_output = np.random.rand(*(4, T, d_h))
+    # encoded_output = dfr.optimal_down_sample(fake_output)
+    # decoded_output = dfr.up_sample_encoded(encoded_output)
 
-    print(fake_output)
-    print(encoded_output.encoding_lengths)
-    print(decoded_output)
+    # print(fake_output)
+    # print(encoded_output.encoding_lengths)
+    # print(decoded_output)
 
     melt_manager = MeltManager()
 
@@ -23,8 +23,7 @@ def main():
             print('\t', result)
             if result is None:
                 continue
-            print('\t', np.cumsum(melt_manager._generate_segment_from_propoption(result,10)))
-            print(melt_manager.random_down_sample_with_propotion(fake_output, result), '\n')
+            print(melt_manager.random_down_sample_with_proption_multi(fake_output, result), '\n')
         print("Working hard to increase step count")
         for _ in range(np.floor(melt_manager.s_p / 2).astype(int)):
             melt_manager.generate_segment_lenght_propotations()
