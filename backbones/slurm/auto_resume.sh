@@ -41,6 +41,7 @@ cd "$BIGCODEC"
 python train.py \
     --config-dir="$REPO/backbones/configs" \
     --config-name="$CFG" \
+    preprocess.datasets.LibriSpeech.root=$REPO/datasets/LibriSpeech \
     train.logger.name="$RUN" \
     train.logger.id="$RUN" \
     log_dir="$LOG_DIR" \

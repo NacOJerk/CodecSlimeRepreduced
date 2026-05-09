@@ -28,6 +28,7 @@ cd "$BIGCODEC"
 python train.py \
     --config-dir=$REPO/backbones/configs \
     --config-name=$CONFIG_NAME \
+    preprocess.datasets.LibriSpeech.root=$REPO/datasets/LibriSpeech \
     train.trainer.devices=1 \
     train.trainer.max_steps=200 \
     train.trainer.min_steps=200 \

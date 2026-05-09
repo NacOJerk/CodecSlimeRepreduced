@@ -22,6 +22,7 @@ cd $BIGCODEC
 python train.py \
     --config-dir=$REPO/backbones/configs \
     --config-name=codecslime_vq8k \
+    preprocess.datasets.LibriSpeech.root=$REPO/datasets/LibriSpeech \
     train.trainer.devices=1 \
     train.trainer.max_steps=50 train.trainer.min_steps=50 \
     train.checkpoint.every_n_train_steps=50 \
