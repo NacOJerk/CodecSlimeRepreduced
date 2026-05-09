@@ -19,11 +19,7 @@ def main():
     for i in range(4 + 1):
         print('Generating some distributions (%d/4)' % i)
         for _ in range(5):
-            result = melt_manager.generate_segment_lenght_propotations()
-            print('\t', result)
-            if result is None:
-                continue
-            print(melt_manager.random_down_sample_with_proption_multi(fake_output, result), '\n')
+            print(melt_manager.melt(fake_output), '\n')
         print("Working hard to increase step count")
         for _ in range(np.floor(melt_manager.s_p / 2).astype(int)):
             melt_manager.generate_segment_lenght_propotations()

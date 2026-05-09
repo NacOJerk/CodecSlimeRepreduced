@@ -93,3 +93,15 @@ class MeltManager:
         results = [self.random_down_sample_with_propotion(raw[i], propoption) for i in range(raw.shape[0])]
         results = np.array(results)
         return results
+    
+    def melt(self, raw: np.ndarray, increase_step=True) -> np.ndarray:
+        propoption = self.generate_segment_lenght_propotations(increase_step)
+        if propoption is None:
+            return raw
+        
+        if raw.ndim == 2:
+            raw = raw[np.newaxis, :, :]
+
+        assert raw.ndim == 3, "Expecting input of shape either (T, D) or (N, T, D)"
+
+        return self.random_down_sample_with_proption_multi(raw, propoption)
