@@ -27,10 +27,9 @@ python train.py \
     --config-dir=$REPO/backbones/configs \
     --config-name=$CONFIG_NAME \
     train.trainer.devices=1 \
-    train.trainer.max_steps=100 \
-    train.trainer.min_steps=100 \
-    dataset.train.batch_size=2 \
-    train.checkpoint.every_n_train_steps=50 \
+    train.trainer.max_steps=200 \
+    train.trainer.min_steps=200 \
+    train.checkpoint.every_n_train_steps=200 \
     train.logger.name=$RUN_NAME \
     train.logger.id=$RUN_NAME \
     log_dir=$REPO/backbones/checkpoints/smoke
