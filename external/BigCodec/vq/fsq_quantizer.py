@@ -35,5 +35,7 @@ class FSQQuantizer(nn.Module):
         out = self.proj_out(z_q)
         if channels_first:
             out = out.transpose(1, 2)  # (B, T, C) -> (B, C, T)
-        commit_loss = x.new_zeros(())
+        # commit_loss is shape (1,) so sum(commit_loss) in lightning_module
+        # matches ResidualVQ's per-quantizer list/tensor convention.
+        commit_loss = x.new_zeros(1)
         return out, indices, commit_loss
