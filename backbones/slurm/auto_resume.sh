@@ -11,7 +11,9 @@ REPO=/home/morg/students/dortirosh/audio_ml_tau_final
 BIGCODEC=$REPO/external/BigCodec
 LOG_DIR=$REPO/backbones/checkpoints/$RUN
 
-source /home/morg/students/dortirosh/envs/codecslime/bin/activate
+VENV=/home/morg/students/dortirosh/envs/codecslime
+export PATH=$VENV/bin:${PATH:-}
+export VIRTUAL_ENV=$VENV
 export PYTHONPATH=$BIGCODEC:${PYTHONPATH:-}
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 

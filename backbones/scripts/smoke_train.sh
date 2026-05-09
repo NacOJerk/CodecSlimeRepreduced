@@ -7,7 +7,9 @@ BIGCODEC=$REPO/external/BigCodec
 CONFIG_NAME=${1:-codecslime_vq8k}
 RUN_NAME=${2:-smoke-${CONFIG_NAME}}
 
-source /home/morg/students/dortirosh/envs/codecslime/bin/activate
+VENV=/home/morg/students/dortirosh/envs/codecslime
+export PATH=$VENV/bin:${PATH:-}
+export VIRTUAL_ENV=$VENV
 export PYTHONPATH=$BIGCODEC:${PYTHONPATH:-}
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 
