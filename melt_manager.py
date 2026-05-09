@@ -1,6 +1,8 @@
 import numpy as np
 from typing import List, Optional
 
+from sched_dfr import SchedDFR
+
 USE_PAPER_D_ENFORCE = False
 
 class MeltManager:
@@ -65,3 +67,24 @@ class MeltManager:
             self._current_training_step += 1
 
         return propoption
+    
+    def _generate_segment_from_propoption(self, propoption: List[float], size=None) -> int:
+        elements = list(range(1, self.max_compression + 1))
+        return np.random.choice(elements, size=size, p=propoption)
+
+    def random_down_sample_with_propotion(self, raw: np.ndarray, propoption: List[float]) -> np.ndarray:
+        total_entries = raw.shape[0]
+
+        # This can probably be optimized
+        total_so_far = 0
+        segments = []
+        while total_so_far < total_entries:
+            segment = int(self._generate_segment_from_propoption(propoption))
+            if total_so_far + segment > total_entries:
+                segments.append(total_entries - total_so_far)
+                break
+            total_so_far += segment
+            segments.append(segment)
+        
+        np.random.shuffle(segments)
+        return SchedDFR.up_sample(SchedDFR.down_sample(raw, segments), segments)
