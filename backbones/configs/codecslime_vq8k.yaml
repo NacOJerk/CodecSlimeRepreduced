@@ -1,0 +1,17 @@
+defaults:
+  - preprocess: default
+  - dataset: librispeech
+  - model: vq8k
+  - train: codecslime_300k
+  - _self_
+
+log_dir: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/checkpoints/vq8k-300k
+debug: false
+ckpt: null
+input_dir: null
+output_dir: null
+
+hydra:
+  output_subdir: hydra
+  job:
+    chdir: True
