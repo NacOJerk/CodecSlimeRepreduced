@@ -10,3 +10,4 @@ vector-quantize-pytorch==1.17.3
 wandb==0.18.3
 omegaconf==2.3.0
 tqdm==4.66.5
+pytest==9.0.3
