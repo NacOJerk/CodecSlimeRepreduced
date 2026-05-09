@@ -2,14 +2,14 @@
 #SBATCH --job-name=cs-fsq18k
 #SBATCH --output=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.out
 #SBATCH --error=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.err
-#SBATCH --partition=killable
+#SBATCH --partition=gpu-morgeva
 #SBATCH --account=gpu-research
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:l40s:1
+#SBATCH --gres=gpu:h100:1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
-#SBATCH --time=24:00:00
+#SBATCH --mem=96G
+#SBATCH --time=5-00:00:00
 #SBATCH --signal=B:TERM@120
 
 REPO=/home/morg/students/dortirosh/audio_ml_tau_final

@@ -36,13 +36,13 @@ disc_grad_clip: 1.0
 gen_schedule_params:
   warmup_step: 1000
   down_step: 125000
-  min_lr: 1.0e-5
-  max_lr: 1.0e-4
+  min_lr: 2.0e-5
+  max_lr: 2.0e-4
 disc_schedule_params:
   warmup_step: 1000
   down_step: 125000
-  min_lr: 1.0e-5
-  max_lr: 1.0e-4
+  min_lr: 2.0e-5
+  max_lr: 2.0e-4
 
 logger:
   _target_: pytorch_lightning.loggers.WandbLogger

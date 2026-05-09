@@ -3,7 +3,7 @@ dataset:
 
 train:
   filelist: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_train.txt
-  batch_size: 8
+  batch_size: 32
   shuffle: true
 
 val:
