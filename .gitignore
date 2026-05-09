@@ -51,3 +51,7 @@ Thumbs.db
 
 # vendored upstream code, kept out of git
 external/BigCodec/
+
+# datasets and filelists, kept out of git
+datasets/
+backbones/data/
