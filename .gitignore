@@ -48,3 +48,6 @@ env/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# vendored upstream code, kept out of git
+external/BigCodec/
