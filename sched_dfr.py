@@ -65,17 +65,3 @@ class SchedDFR:
     
     def up_sample(self, encoded_output: EncodedData) -> np.ndarray:
         return np.repeat(encoded_output.encoded_data, encoded_output.encoding_lengths, axis=0)
-
-    def encode_binary(self, encoded_data: EncodedData) -> bytes:
-        raise NotImplementedError()
-    
-    def decode_binary(self, encoded_bytes: bytes) -> EncodedData:
-        raise NotImplementedError()
-    
-    def encode(self, raw_output: np.ndarray) -> bytes:
-        encoded_data = self.down_sample(raw_output)
-        return self.encode_binary(encoded_data)
-    
-    def decode(self, encoded_data: bytes) -> np.ndarray:
-        encoded_output = self.decode_binary(encoded_data)
-        return self.up_sample(encoded_output)
