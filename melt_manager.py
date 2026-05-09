@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from typing import List, Optional
 
 from sched_dfr import SchedDFR
@@ -76,20 +77,22 @@ class MeltManager:
         return np.random.choice(elements, size=size, p=propoption)
 
     def random_down_sample_with_propotion(self, raw: np.ndarray, propoption: List[float]) -> np.ndarray:
-        total_entries = raw.shape[0]
+        with torch.no_grad():
+            total_entries = raw.shape[0]
 
-        # This can probably be optimized
-        total_so_far = 0
-        segments = []
-        while total_so_far < total_entries:
-            segment = int(self._generate_segment_from_propoption(propoption))
-            if total_so_far + segment > total_entries:
-                segments.append(total_entries - total_so_far)
-                break
-            total_so_far += segment
-            segments.append(segment)
-        
-        np.random.shuffle(segments)
+            # This can probably be optimized
+            total_so_far = 0
+            segments = []
+            while total_so_far < total_entries:
+                segment = int(self._generate_segment_from_propoption(propoption))
+                if total_so_far + segment > total_entries:
+                    segments.append(total_entries - total_so_far)
+                    break
+                total_so_far += segment
+                segments.append(segment)
+            
+            np.random.shuffle(segments)
+            
         return SchedDFR.up_sample(SchedDFR.down_sample(raw, segments), segments)
     
     def random_down_sample_with_proption_multi(self, raw: np.ndarray, propoption: List[float]) -> np.ndarray:
@@ -98,7 +101,9 @@ class MeltManager:
         return results
     
     def melt(self, raw: np.ndarray, increase_step=True) -> np.ndarray:
-        propoption = self.generate_segment_lenght_propotations(increase_step)
+        with torch.no_grad():
+            propoption = self.generate_segment_lenght_propotations(increase_step)
+        
         if propoption is None:
             return raw
         
