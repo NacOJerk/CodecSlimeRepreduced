@@ -22,7 +22,7 @@ class SchedDFR:
         return float(np.sum(l2_norms))
 
     @staticmethod
-    def _down_sample(raw_output: np.ndarray, encoding_lengths: List[int]) -> np.ndarray:
+    def down_sample(raw_output: np.ndarray, encoding_lengths: List[int]) -> np.ndarray:
         compressed_features = []
         current_start = 0
         for s in encoding_lengths:
@@ -33,6 +33,10 @@ class SchedDFR:
             current_start = current_end        
 
         return np.array(compressed_features)
+    
+    @staticmethod
+    def up_sample(encoded_data: np.ndarray, encoding_lengths: List[int]) -> np.ndarray:
+        return np.repeat(encoded_data, encoding_lengths, axis=0)
 
     def optimal_down_sample(self, raw_output: np.ndarray) -> EncodedData:
         t, _ = raw_output.shape
@@ -65,7 +69,7 @@ class SchedDFR:
 
         assert sum(final_s_choices) == t, f"Invalid encoding ({final_s_choices} vs t={t})"
     
-        return EncodedData(SchedDFR._down_sample(raw_output, final_s_choices), final_s_choices)
+        return EncodedData(SchedDFR.down_sample(raw_output, final_s_choices), final_s_choices)
     
-    def up_sample(self, encoded_output: EncodedData) -> np.ndarray:
-        return np.repeat(encoded_output.encoded_data, encoded_output.encoding_lengths, axis=0)
+    def up_sample_encoded(self, encoded_output: EncodedData) -> np.ndarray:
+        return SchedDFR.up_sample(encoded_output.encoded_data, encoded_output.encoding_lengths)

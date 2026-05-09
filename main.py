@@ -7,7 +7,7 @@ def main():
     d_h = 2
     fake_output = np.ones((T, d_h))
     encoded_output = dfr.optimal_down_sample(fake_output)
-    decoded_output = dfr.up_sample(encoded_output)
+    decoded_output = dfr.up_sample_encoded(encoded_output)
 
     print(fake_output)
     print(encoded_output.encoding_lengths)
