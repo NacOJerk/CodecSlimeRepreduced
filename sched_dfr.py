@@ -1,5 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
+import torch
 from typing import List
 
 @dataclass
@@ -39,35 +40,36 @@ class SchedDFR:
         return np.repeat(encoded_data, encoding_lengths, axis=0)
 
     def optimal_down_sample(self, raw_output: np.ndarray) -> EncodedData:
-        t, _ = raw_output.shape
-        t_tag = np.ceil(t / self.down_sample_ratio).astype(int)
-        optiaml_distance = [[-np.inf for _ in range(t_tag + 1)] for _ in range(t + 1)]
-        chosen_s_array = [[0 for _ in range(t_tag + 1)] for _ in range(t + 1)]
-        optiaml_distance[0][0] = 0
-        for i in range(1, t_tag + 1):
-            for j in range(1, t + 1):
-                max_so_far = -np.inf
-                chosen_s = 0
-                max_s = min(j - i + 1, self.max_compression)
-                for s in range(1, max_s + 1):
-                    diff = optiaml_distance[j - s][i - 1] - SchedDFR._difference_loss(raw_output, j - 1, s)
-                    if diff >= max_so_far:
-                        max_so_far = diff
-                        chosen_s = s
-                optiaml_distance[j][i] = max_so_far
-                chosen_s_array[j][i] = chosen_s
+        with torch.no_grad():
+            t, _ = raw_output.shape
+            t_tag = np.ceil(t / self.down_sample_ratio).astype(int)
+            optiaml_distance = [[-np.inf for _ in range(t_tag + 1)] for _ in range(t + 1)]
+            chosen_s_array = [[0 for _ in range(t_tag + 1)] for _ in range(t + 1)]
+            optiaml_distance[0][0] = 0
+            for i in range(1, t_tag + 1):
+                for j in range(1, t + 1):
+                    max_so_far = -np.inf
+                    chosen_s = 0
+                    max_s = min(j - i + 1, self.max_compression)
+                    for s in range(1, max_s + 1):
+                        diff = optiaml_distance[j - s][i - 1] - SchedDFR._difference_loss(raw_output, j - 1, s)
+                        if diff >= max_so_far:
+                            max_so_far = diff
+                            chosen_s = s
+                    optiaml_distance[j][i] = max_so_far
+                    chosen_s_array[j][i] = chosen_s
 
 
-        final_s_choices = []
-        current_j = t
-        current_i = t_tag
-        while current_j > 0:
-            final_s_choices.append(chosen_s_array[current_j][current_i])
-            current_j -= chosen_s_array[current_j][current_i]
-            current_i -= 1
-        final_s_choices.reverse()
+            final_s_choices = []
+            current_j = t
+            current_i = t_tag
+            while current_j > 0:
+                final_s_choices.append(chosen_s_array[current_j][current_i])
+                current_j -= chosen_s_array[current_j][current_i]
+                current_i -= 1
+            final_s_choices.reverse()
 
-        assert sum(final_s_choices) == t, f"Invalid encoding ({final_s_choices} vs t={t})"
+            assert sum(final_s_choices) == t, f"Invalid encoding ({final_s_choices} vs t={t})"
     
         return EncodedData(SchedDFR.down_sample(raw_output, final_s_choices), final_s_choices)
     
