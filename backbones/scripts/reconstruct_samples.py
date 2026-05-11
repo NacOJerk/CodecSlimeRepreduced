@@ -96,7 +96,7 @@ def main() -> None:
 
     splits = [
         ("train", REPO / "backbones" / "data" / "librispeech_train.txt", args.n_train),
-        ("dev", REPO / "backbones" / "data" / "librispeech_test.txt", args.n_dev),
+        ("dev", REPO / "backbones" / "data" / "librispeech_dev.txt", args.n_dev),
     ]
     for split_name, filelist, n in splits:
         if n <= 0:

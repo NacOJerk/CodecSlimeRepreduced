@@ -57,3 +57,4 @@ datasets/
 backbones/data/
 backbones/slurm/logs/
 backbones/checkpoints/
+CLAUDE.md
