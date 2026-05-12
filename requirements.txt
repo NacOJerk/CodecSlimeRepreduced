@@ -11,3 +11,10 @@ wandb==0.18.3
 omegaconf==2.3.0
 tqdm==4.66.5
 pytest==9.0.3
+
+# eval metrics
+openai-whisper==20250625
+jiwer==4.0.0
+pystoi==0.4.1
+pesq==0.0.4
+resemblyzer==0.1.4
