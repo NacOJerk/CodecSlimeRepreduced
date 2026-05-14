@@ -191,27 +191,93 @@ def _quality_vs_bitrate(df: pd.DataFrame, out: Path):
     plt.close(fig)
 
 
+def _paperd_compare(df_all: pd.DataFrame, out_csv: Path, out_png: Path) -> None:
+    # Pull every Melt cell and tag whether it used the paper-literal d-vector
+    # (USE_PAPER_D_ENFORCE=True) or the user's correction (False = default).
+    sub = df_all[df_all["Stage"].astype(str).isin(["Melt", "Melt (paperd)"])].copy()
+    sub["d-vector formula"] = sub["Stage"].map(
+        {"Melt (paperd)": "before fix (paper-literal)",
+         "Melt": "after fix (user correction)"})
+    metrics = ["Bitrate (bps)", "WER", "STOI", "PESQ", "SECS", "UTMOS"]
+    pretty = sub[["Backbone", "Mode", "d-vector formula"] + metrics].copy()
+    for c in ["WER", "STOI", "PESQ", "SECS", "UTMOS"]:
+        pretty[c] = pretty[c].map(lambda v: f"{v:.4f}")
+    pretty.to_csv(out_csv, index=False)
+
+    # Plot: 5 metrics x 4 cells (2 backbones x 2 modes), grouped bars
+    plot_metrics = [("WER", True), ("PESQ", False), ("STOI", False),
+                    ("SECS", False), ("UTMOS", False)]
+    cells = [(b, m) for b in BACKBONE_ORDER for m in ["Fixed 40Hz", "ScheDFR 40Hz"]]
+    cell_labels = [f"{b}\n{m.replace(' 40Hz','')}" for b, m in cells]
+    formulas = ["before fix (paper-literal)", "after fix (user correction)"]
+    formula_colors = {"before fix (paper-literal)": "#9467bd",
+                      "after fix (user correction)": "#1f77b4"}
+
+    fig, axes = plt.subplots(1, len(plot_metrics), figsize=(4.2 * len(plot_metrics), 5),
+                             sharey=False)
+    bar_w = 0.38
+    x = np.arange(len(cells))
+    for ax, (metric, lower) in zip(axes, plot_metrics):
+        for i, formula in enumerate(formulas):
+            vals, labels_present = [], []
+            for j, (b, m) in enumerate(cells):
+                row = sub[(sub["Backbone"] == b) & (sub["Mode"] == m)
+                          & (sub["d-vector formula"] == formula)]
+                if row.empty:
+                    vals.append(np.nan)
+                else:
+                    vals.append(float(row.iloc[0][metric]))
+            offset = (i - 0.5) * bar_w
+            bars = ax.bar(x + offset, vals, bar_w,
+                          color=formula_colors[formula],
+                          edgecolor="black", linewidth=0.4,
+                          label=formula if ax is axes[0] else None)
+            for xi, v in zip(x + offset, vals):
+                if not np.isnan(v):
+                    ax.text(xi, v, f"{v:.3f}", ha="center", va="bottom",
+                            fontsize=7)
+        ax.set_xticks(x)
+        ax.set_xticklabels(cell_labels, fontsize=9)
+        ax.set_title(metric + ("  (lower is better)" if lower else "  (higher is better)"),
+                     fontsize=10)
+        ax.grid(axis="y", linestyle=":", alpha=0.5)
+    fig.suptitle("Melt d-vector ablation: before vs after the user's fix\n"
+                 "(no same-backbone pair is available; missing bars = no run)",
+                 fontsize=12)
+    fig.legend(loc="lower center", ncol=2, bbox_to_anchor=(0.5, -0.04), fontsize=10)
+    fig.tight_layout(rect=(0, 0.02, 1, 0.93))
+    fig.savefig(out_png, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--results-dir", type=Path, default=Path("backbones/results"))
     ap.add_argument("--out-dir", type=Path, default=Path("backbones/results/final"))
     args = ap.parse_args()
 
-    df = load_rows(args.results_dir)
-    if df.empty:
+    df_all = load_rows(args.results_dir)
+    if df_all.empty:
         raise SystemExit(f"no eval-* metrics found under {args.results_dir}")
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
-    write_csv(df, args.out_dir / "all_metrics.csv")
-    write_markdown(df, args.out_dir / "all_metrics.md")
+    # Main results exclude the paper-literal d-vector ablation rows.
+    df_main = df_all[df_all["Stage"] != "Melt (paperd)"].copy()
+    write_csv(df_main, args.out_dir / "all_metrics.csv")
+    write_markdown(df_main, args.out_dir / "all_metrics.md")
 
-    _bar(df, "WER", True, args.out_dir / "wer_by_variant.png", "WER per cell")
-    _bar(df, "PESQ", False, args.out_dir / "pesq_by_variant.png", "PESQ per cell")
-    _bar(df, "UTMOS", False, args.out_dir / "utmos_by_variant.png", "UTMOS per cell")
-    _grid(df, args.out_dir / "metrics_grid.png")
-    _quality_vs_bitrate(df, args.out_dir / "quality_vs_bitrate.png")
+    _bar(df_main, "WER", True, args.out_dir / "wer_by_variant.png", "WER per cell")
+    _bar(df_main, "PESQ", False, args.out_dir / "pesq_by_variant.png", "PESQ per cell")
+    _bar(df_main, "UTMOS", False, args.out_dir / "utmos_by_variant.png", "UTMOS per cell")
+    _grid(df_main, args.out_dir / "metrics_grid.png")
+    _quality_vs_bitrate(df_main, args.out_dir / "quality_vs_bitrate.png")
 
-    print(f"[ok] wrote {len(df)} rows to {args.out_dir}/")
+    # Paper-d ablation gets its own deliverables.
+    _paperd_compare(df_all,
+                    args.out_dir / "paperd_compare.csv",
+                    args.out_dir / "paperd_compare.png")
+
+    print(f"[ok] wrote main:{len(df_main)} + paperd-ablation rows to {args.out_dir}/")
     for p in sorted(args.out_dir.iterdir()):
         size_kb = p.stat().st_size / 1024
         print(f"  {p.name}  ({size_kb:.1f} KB)")
