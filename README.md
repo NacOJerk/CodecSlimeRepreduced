@@ -97,6 +97,32 @@ python backbones/scripts/eval_metrics.py \
 
 ---
 
+### Stage 3 — Melt (DFR Foundation Post-Training)
+
+Post-train the FFR backbone with random-rate downsampling to produce a DFR foundation model. Hyperparameter and LR rationale lives in [docs/melt_training.md](docs/melt_training.md).
+
+Run via SLURM (each job runs for 2 days, auto-resubmits on signal):
+
+```bash
+sbatch backbones/slurm/train_melt_vq8k.slurm
+sbatch backbones/slurm/train_melt_fsq18k.slurm
+```
+
+Or directly (single GPU):
+
+```bash
+python backbones/scripts/train_melt.py \
+    --config-dir=backbones/configs \
+    --config-name=codecslime_melt_vq8k \
+    train.logger.name=melt-vq8k-100k \
+    train.logger.id=melt-vq8k-100k \
+    log_dir=backbones/checkpoints/melt-vq8k-100k
+```
+
+Checkpoints land in `backbones/checkpoints/melt-{vq8k,fsq18k}-100k/`. W&B project: `codecslime-melt`.
+
+---
+
 ### Metrics Reported
 
 | Metric | Direction | Notes |

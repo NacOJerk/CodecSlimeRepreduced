@@ -1,115 +1,125 @@
-import numpy as np
-import torch
 from typing import List, Optional
 
-from sched_dfr import SchedDFR
+import numpy as np
+import torch
 
 USE_PAPER_D_ENFORCE = False
 INCLUDE_SKIP_AS_STEP = True
 
+
 class MeltManager:
-    def __init__(self, 
+    def __init__(self,
                  max_compression: int = 4,
                  p_tgt: List[float] = [0.1, 0.45, 0.25, 0.2],
-                 s_p: int = 1e5,
-                 concentration_control: float = 30.0, 
+                 s_p: int = 100000,
+                 concentration_control: float = 30.0,
                  skip_prob: float = 0.5,
                  epsilon: float = 1e-6):
-        """
-        Initializes the MeltManager with dynamic downsampling parameters.
+        """Random-rate downsampling curriculum sampler for the CodecSlime Melt stage.
 
         Args:
-            max_compression (int): The maximum downsampling rate (U). 
-                Defines the dimensionality of the rate vectors.
-            p_tgt (List[float]): The target mix proportions (p_tgt) over the 
-                available rates. Must sum to 1.0.
-            s_p (int): The number of training steps (S_p) required to reach 
-                the target proportion p_tgt. Typically 10^5 steps.
-            concentration_control (float): Controls how sharply the Dirichlet 
-                samples cluster (c). This value decays as training progresses.
-            skip_prob (float): The probability (rho) of performing no 
-                downsampling at all for a given step (typically 0.5).
-            epsilon (float): A small constant value (epsilon) used to prevent 
-                zero entries in the progress-weighted blend vector (d).
+            max_compression: U, the largest per-segment downsampling factor.
+            p_tgt: target proportions over rates {1..U}. Must sum to 1 (within float tolerance).
+            s_p: number of training steps to reach p_tgt (curriculum length).
+            concentration_control: Dirichlet concentration scale c.
+            skip_prob: probability of no downsampling on a given step.
+            epsilon: floor for clipped proportions before forming the Dirichlet alpha.
         """
         self.max_compression = max_compression
-        
+
         if len(p_tgt) != self.max_compression:
             raise ValueError("Target compression probabilities length doesn't match max compression")
-        if sum(p_tgt) != 1:
+        if abs(sum(p_tgt) - 1.0) > 1e-6:
             raise ValueError("Target compression probabilities must sum to 1")
         self.p_tgt = np.array(p_tgt)
-        
+
         self.s_p = s_p
         self.concentration_control = concentration_control
-        
+
         if not (0 <= skip_prob <= 1):
             raise ValueError("Skip probability must be between 0 and 1")
         self.skip_prob = skip_prob
         self.epsilon = epsilon
-        
+
         self._current_training_step: int = 0
-    
-    def generate_segment_lenght_propotations(self, increase_step=True) -> Optional[List[float]]:
+
+    def generate_segment_lenght_propotations(self, increase_step: bool = True) -> Optional[np.ndarray]:
         if np.random.uniform() < self.skip_prob:
             if INCLUDE_SKIP_AS_STEP and increase_step:
                 self._current_training_step += 1
-            return
-        
+            return None
+
         training_progress = min(self._current_training_step / self.s_p, 1)
         current_prop = training_progress * self.p_tgt
         if USE_PAPER_D_ENFORCE:
-            current_prop[-1] = 1 - np.sum(current_prop[:-1]) # The paper had this so the probablity of 4 is the most likely, this feels like a mistake 
+            current_prop[-1] = 1 - np.sum(current_prop[:-1])
         else:
-            current_prop[0] = 1 - np.sum(current_prop[1:]) 
+            current_prop[0] = 1 - np.sum(current_prop[1:])
         current_prop = np.maximum(current_prop, self.epsilon)
 
-        alpha = current_prop * self.concentration_control / (max(1, self._current_training_step / self.s_p)**2.5)
-        propoption = np.random.dirichlet(alpha)
+        alpha = current_prop * self.concentration_control / (max(1, self._current_training_step / self.s_p) ** 2.5)
+        proportion = np.random.dirichlet(alpha)
 
         if increase_step:
             self._current_training_step += 1
 
-        return propoption
-    
-    def _generate_segment_from_propoption(self, propoption: List[float], size=None) -> int:
-        elements = list(range(1, self.max_compression + 1))
-        return np.random.choice(elements, size=size, p=propoption)
+        return proportion
 
-    def random_down_sample_with_propotion(self, raw: np.ndarray, propoption: List[float]) -> np.ndarray:
-        with torch.no_grad():
-            total_entries = raw.shape[0]
+    def _sample_segments_to_T(self, proportion: np.ndarray, T: int) -> List[int]:
+        """Sample segment lengths from `proportion` over rates {1..U} until they tile T.
 
-            # This can probably be optimized
-            total_so_far = 0
-            segments = []
-            while total_so_far < total_entries:
-                segment = int(self._generate_segment_from_propoption(propoption))
-                if total_so_far + segment > total_entries:
-                    segments.append(total_entries - total_so_far)
-                    break
-                total_so_far += segment
-                segments.append(segment)
-            
-            np.random.shuffle(segments)
-            
-        return SchedDFR.up_sample(SchedDFR.down_sample(raw, segments), segments)
-    
-    def random_down_sample_with_proption_multi(self, raw: np.ndarray, propoption: List[float]) -> np.ndarray:
-        results = [self.random_down_sample_with_propotion(raw[i], propoption) for i in range(raw.shape[0])]
-        results = np.array(results)
-        return results
-    
-    def melt(self, raw: np.ndarray, increase_step=True) -> np.ndarray:
-        with torch.no_grad():
-            propoption = self.generate_segment_lenght_propotations(increase_step)
-        
-        if propoption is None:
-            return raw
-        
-        if raw.ndim == 2:
-            raw = raw[np.newaxis, :, :]
+        The final segment is truncated to exactly fit T.
+        """
+        elements = np.arange(1, self.max_compression + 1)
+        total = 0
+        segments: List[int] = []
+        while total < T:
+            s = int(np.random.choice(elements, p=proportion))
+            if total + s > T:
+                segments.append(T - total)
+                break
+            total += s
+            segments.append(s)
+        return segments
 
-        assert raw.ndim == 3, "Expecting input of shape either (T, D) or (N, T, D)"
+    def melt(self, x: torch.Tensor, step: int) -> torch.Tensor:
+        """Gradient-preserving Melt apply.
 
-        return self.random_down_sample_with_proption_multi(raw, propoption)
+        Args:
+            x: float tensor of shape [B, C, T].
+            step: the current curriculum step (use Lightning's `global_step` so the
+                curriculum is checkpoint-restored on resume).
+
+        Returns:
+            A tensor of the same shape as `x`, with each segment along T replaced by
+            its per-channel mean (broadcast back to the segment's length). Returns
+            `x` unchanged on the skip-prob bypass.
+        """
+        self._current_training_step = step
+        proportion = self.generate_segment_lenght_propotations(increase_step=False)
+        if proportion is None:
+            return x
+        B, _, T = x.shape
+        lengths_per_item = [self._sample_segments_to_T(proportion, T) for _ in range(B)]
+        return _apply_mean_broadcast(x, lengths_per_item)
+
+
+def _apply_mean_broadcast(x: torch.Tensor, lengths_per_item: List[List[int]]) -> torch.Tensor:
+    """Per-segment mean along T, broadcast back to length T via repeat_interleave.
+
+    Args:
+        x: [B, C, T] tensor.
+        lengths_per_item: B lists of segment lengths, each summing to T.
+
+    Both `mean` and `repeat_interleave` are differentiable in torch, so gradients
+    flow back to `x`. Cool's future manager calls this same helper after computing
+    its own (DP-based) `lengths_per_item`.
+    """
+    out = []
+    for b in range(x.shape[0]):
+        seg = lengths_per_item[b]
+        pieces = torch.split(x[b], seg, dim=-1)
+        means = torch.stack([p.mean(dim=-1) for p in pieces], dim=-1)
+        lengths = torch.tensor(seg, device=x.device)
+        out.append(means.repeat_interleave(lengths, dim=-1))
+    return torch.stack(out, dim=0)

@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --job-name=cs-melt-fsq18k
+#SBATCH --output=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.out
+#SBATCH --error=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.err
+#SBATCH --partition=gpu-morgeva
+#SBATCH --account=gpu-research
+#SBATCH --nodelist=t-100
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --gres=gpu:h100:1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=96G
+#SBATCH --time=2-00:00:00
+#SBATCH --signal=B:TERM@120
+
+REPO=/home/morg/students/dortirosh/audio_ml_tau_final
+
+trap 'echo "[slurm] caught TERM, resubmitting"; sbatch $0; exit 0' TERM
+
+$REPO/backbones/slurm/auto_resume_melt.sh codecslime_melt_fsq18k melt-fsq18k-100k
