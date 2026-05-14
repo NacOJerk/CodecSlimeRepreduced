@@ -1,0 +1,71 @@
+trainer:
+  accelerator: 'gpu'
+  devices: 1
+  min_steps: 12500
+  max_steps: 12500
+  precision: 16-mixed
+  limit_val_batches: 0
+  num_sanity_val_steps: 0
+  accumulate_grad_batches: 1
+
+lambdas:
+  lambda_disc: 1.0
+  lambda_feat_match_loss: 1.0
+  lambda_mel_loss: 15.0
+  lambda_adv: 1.0
+  lambda_stft_loss: 1.0
+
+use_mel_loss: true
+use_feat_match_loss: true
+
+stft_loss_params:
+  fft_sizes: [128, 256, 512, 1024, 2048]
+  hop_sizes: [32, 64, 128, 256, 512]
+  win_lengths: [128, 256, 512, 1024, 2048]
+  window: hann_window
+
+gen_optim_params:
+  lr: 1.0
+  betas: [0.8, 0.9]
+disc_optim_params:
+  lr: 1.0
+  betas: [0.8, 0.9]
+gen_grad_clip: 1.0
+disc_grad_clip: 1.0
+
+# Square-root LR scaling for batch 64 vs paper batch 8: sqrt(8) ~ 2.828.
+# Total step budget scaled linearly: 100k / 8 = 12500. Warmup keeps the
+# 1% ratio (1000/100000 -> 125/12500). down_step = total - warmup.
+gen_schedule_params:
+  warmup_step: 125
+  down_step: 12375
+  min_lr: 2.83e-5
+  max_lr: 2.83e-4
+disc_schedule_params:
+  warmup_step: 125
+  down_step: 12375
+  min_lr: 2.83e-5
+  max_lr: 2.83e-4
+
+freeze_encoder: false
+
+compression:
+  kind: melt
+  max_compression: 4
+  p_tgt: [0.1, 0.45, 0.25, 0.2]
+  s_p: 12500
+  concentration_control: 30.0
+  skip_prob: 0.5
+
+logger:
+  _target_: pytorch_lightning.loggers.WandbLogger
+  project: codecslime-melt
+  entity: dortiroshtau-tel-aviv-university
+  name: ???
+  resume: allow
+  id: ???
+
+checkpoint:
+  every_n_train_steps: 625
+  save_top_k: 3
+  save_last: true
