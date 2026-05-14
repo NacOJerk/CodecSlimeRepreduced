@@ -22,7 +22,11 @@ from vq.codec_decoder import CodecDecoder  # noqa: E402
 
 
 def infer_model_name(ckpt_path: Path) -> str:
-    return "fsq18k" if "fsq" in ckpt_path.name.lower() else "vq8k"
+    # Our checkpoints are saved as `<variant>/last.ckpt`, so the variant name
+    # lives on the parent dir, not the filename. Check both for robustness in
+    # case someone hands us a renamed standalone .ckpt.
+    haystack = f"{ckpt_path.parent.name}/{ckpt_path.name}".lower()
+    return "fsq18k" if "fsq" in haystack else "vq8k"
 
 
 def load_codec(ckpt_path: Path, device: str) -> Tuple[CodecEncoder, CodecDecoder, str]:
