@@ -1,0 +1,5 @@
+Backbone,Mode,d-vector formula,Bitrate (bps),WER,STOI,PESQ,SECS,UTMOS
+VQ-8k,Fixed 40Hz,before fix (paper-literal),521,0.3020,0.8593,1.4554,0.8624,3.2995
+VQ-8k,ScheDFR 40Hz,before fix (paper-literal),601,0.2874,0.8732,1.5945,0.8751,3.4861
+FSQ-18k,Fixed 40Hz,after fix (user correction),567,0.2957,0.8637,1.4843,0.8970,3.3441
+FSQ-18k,ScheDFR 40Hz,after fix (user correction),647,0.2902,0.8744,1.6025,0.9049,3.4446
