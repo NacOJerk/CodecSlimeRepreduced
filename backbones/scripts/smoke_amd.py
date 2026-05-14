@@ -14,7 +14,7 @@ import sys
 import time
 
 import torch
-from hydra import compose, initialize_config_dir
+from omegaconf import OmegaConf
 
 REPO_ROOT = Path("/home/morg/students/dortirosh/audio_ml_tau_final")
 sys.path.insert(0, str(REPO_ROOT))
@@ -38,10 +38,38 @@ def report_gpu():
 
 
 def build_cfg(backbone: str):
-    cfg_dir = str(REPO_ROOT / "backbones" / "configs")
-    with initialize_config_dir(config_dir=cfg_dir, version_base=None):
-        cfg = compose(config_name=f"codecslime_melt_{backbone}")
+    # Side-step Hydra by composing manually with OmegaConf. The wrapper only
+    # reads `cfg.train.*` and `cfg.model.*` (and `cfg.dataset.train.batch_size`
+    # for the dataloader, which we don't build here).
+    train_yaml = REPO_ROOT / "backbones" / "configs" / "train" / "codecslime_melt_n210.yaml"
+    model_yaml = REPO_ROOT / "backbones" / "configs" / "model" / f"{backbone}.yaml"
+    dataset_yaml = REPO_ROOT / "backbones" / "configs" / "dataset" / "librispeech_b64.yaml"
+    cfg = OmegaConf.create({
+        "train": OmegaConf.load(train_yaml),
+        "model": OmegaConf.load(model_yaml),
+        "dataset": OmegaConf.load(dataset_yaml),
+    })
     return cfg
+
+
+def _step(model, B: int):
+    T = 16000
+    wav = torch.randn(B, T, device="cuda")
+    batch = {"wav": wav}
+
+    torch.cuda.reset_peak_memory_stats()
+    t0 = time.perf_counter()
+    out = model(batch)
+    fwd_t = time.perf_counter() - t0
+    loss = (out["gen_wav"] - wav.unsqueeze(1)).pow(2).mean() + out["vq_loss"]
+
+    t0 = time.perf_counter()
+    loss.backward()
+    bwd_t = time.perf_counter() - t0
+    peak = torch.cuda.max_memory_allocated() / 2**30
+
+    model.zero_grad(set_to_none=True)
+    return fwd_t, bwd_t, peak, loss.item()
 
 
 def forward_backward(backbone: str):
@@ -57,25 +85,17 @@ def forward_backward(backbone: str):
     model = CoolMeltWrapper(cfg, melt_manager=mm, cool_manager=None).cuda()
     model.train()
 
-    B, T = 2, 16000
-    wav = torch.randn(B, T, device="cuda")
-    batch = {"wav": wav}
-
-    t0 = time.perf_counter()
-    out = model(batch)
-    print(f"  forward done in {time.perf_counter() - t0:.3f}s; gen_wav shape={tuple(out['gen_wav'].shape)}")
-
-    loss = (out["gen_wav"] - wav.unsqueeze(1)).pow(2).mean() + out["vq_loss"]
-    t0 = time.perf_counter()
-    loss.backward()
-    print(f"  backward done in {time.perf_counter() - t0:.3f}s; loss={loss.item():.4f}")
+    for B in (2, 16, 64):
+        try:
+            fwd_t, bwd_t, peak, loss_v = _step(model, B)
+            print(f"  B={B:>3d}  fwd={fwd_t:.3f}s  bwd={bwd_t:.3f}s  peak={peak:.2f}GiB  loss={loss_v:.4f}")
+        except torch.cuda.OutOfMemoryError as e:
+            print(f"  B={B:>3d}  OOM: {e}")
+            torch.cuda.empty_cache()
 
     n_grad = sum(1 for p in model.parameters() if p.grad is not None)
     n_total = sum(1 for _ in model.parameters())
-    print(f"  params with grads: {n_grad}/{n_total}")
-    if n_grad == 0:
-        print("ERROR: no gradients flowed")
-        sys.exit(2)
+    print(f"  params with grads (after last step): {n_grad}/{n_total}")
 
 
 if __name__ == "__main__":

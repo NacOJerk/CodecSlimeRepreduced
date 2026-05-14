@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=cs-smoke-amd
+#SBATCH --job-name=cs-smoke-amd-min
 #SBATCH --output=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.out
 #SBATCH --error=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.err
 #SBATCH --partition=gpu-morgeva
@@ -21,9 +21,6 @@ export VIRTUAL_ENV=$VENV
 export PYTHONPATH=$REPO:$BIGCODEC:${PYTHONPATH:-}
 export PYTHONUNBUFFERED=1
 
-echo "[smoke] node: $(hostname)"
-echo "[smoke] python: $(which python)"
-echo "[smoke] cuda visible: ${CUDA_VISIBLE_DEVICES:-unset}, rocm visible: ${HIP_VISIBLE_DEVICES:-unset}, rocr: ${ROCR_VISIBLE_DEVICES:-unset}"
-
+echo "[slurm] host=$(hostname) cuda=${CUDA_VISIBLE_DEVICES:-unset} rocr=${ROCR_VISIBLE_DEVICES:-unset} hip=${HIP_VISIBLE_DEVICES:-unset}"
 cd "$REPO"
-python backbones/scripts/smoke_amd.py vq8k fsq18k
+python -u backbones/scripts/smoke_amd_min.py

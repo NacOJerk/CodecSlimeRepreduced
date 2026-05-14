@@ -19,6 +19,7 @@ VENV=/home/morg/students/dortirosh/envs/cs_amd
 export PATH=$VENV/bin:${PATH:-}
 export VIRTUAL_ENV=$VENV
 export PYTHONPATH=$REPO:$BIGCODEC:${PYTHONPATH:-}
+export PYTHONUNBUFFERED=1
 
 # ROCm hint: turn off MIOpen find-mode caching the first time we touch it.
 # PYTORCH_CUDA_ALLOC_CONF is CUDA-only, harmless on ROCm but skip it to be tidy.
