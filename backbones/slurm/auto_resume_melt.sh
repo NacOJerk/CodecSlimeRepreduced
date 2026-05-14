@@ -5,7 +5,10 @@
 set -euo pipefail
 
 CFG=$1
-RUN=$2
+shift
+RUN=$1
+shift
+EXTRA_ARGS=("$@")
 
 REPO=/home/morg/students/dortirosh/audio_ml_tau_final
 BIGCODEC=$REPO/external/BigCodec
@@ -45,4 +48,5 @@ python backbones/scripts/train_melt.py \
     train.logger.name="$RUN" \
     train.logger.id="$RUN" \
     log_dir="$LOG_DIR" \
+    "${EXTRA_ARGS[@]}" \
     "${RESUME_ARG[@]}"
