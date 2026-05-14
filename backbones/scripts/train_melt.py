@@ -60,6 +60,7 @@ def _build_compression(cfg):
             s_p=cfg.train.compression.s_p,
             concentration_control=cfg.train.compression.concentration_control,
             skip_prob=cfg.train.compression.skip_prob,
+            use_paper_d_enforce=cfg.train.compression.get("use_paper_d_enforce", None),
         )
         return mm, None
     if kind == "cool":

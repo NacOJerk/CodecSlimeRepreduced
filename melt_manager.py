@@ -14,7 +14,8 @@ class MeltManager:
                  s_p: int = 100000,
                  concentration_control: float = 30.0,
                  skip_prob: float = 0.5,
-                 epsilon: float = 1e-6):
+                 epsilon: float = 1e-6,
+                 use_paper_d_enforce: Optional[bool] = None):
         """Random-rate downsampling curriculum sampler for the CodecSlime Melt stage.
 
         Args:
@@ -24,6 +25,11 @@ class MeltManager:
             concentration_control: Dirichlet concentration scale c.
             skip_prob: probability of no downsampling on a given step.
             epsilon: floor for clipped proportions before forming the Dirichlet alpha.
+            use_paper_d_enforce: if None (default), use module-level
+                ``USE_PAPER_D_ENFORCE``. If True, enforce sum-to-1 on the *last*
+                rate (paper-literal d-vector formula, starts at max randomness).
+                If False, enforce on the *first* rate (our fix; starts at min
+                randomness and curriculum-anneals to ``p_tgt``).
         """
         self.max_compression = max_compression
 
@@ -40,6 +46,9 @@ class MeltManager:
             raise ValueError("Skip probability must be between 0 and 1")
         self.skip_prob = skip_prob
         self.epsilon = epsilon
+        self.use_paper_d_enforce = (
+            USE_PAPER_D_ENFORCE if use_paper_d_enforce is None else bool(use_paper_d_enforce)
+        )
 
         self._current_training_step: int = 0
 
@@ -51,7 +60,7 @@ class MeltManager:
 
         training_progress = min(self._current_training_step / self.s_p, 1)
         current_prop = training_progress * self.p_tgt
-        if USE_PAPER_D_ENFORCE:
+        if self.use_paper_d_enforce:
             current_prop[-1] = 1 - np.sum(current_prop[:-1])
         else:
             current_prop[0] = 1 - np.sum(current_prop[1:])
