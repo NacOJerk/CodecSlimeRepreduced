@@ -11,7 +11,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=23:59:00
-#SBATCH --array=0-14
+#SBATCH --array=0-15
 
 # 10-cell evaluation on UniCATS testset B (500 utts) targeting n-102 H100.
 # Backbones: ffr (80 Hz), fixed (40 Hz uniform 2-frame mean), dfr (40 Hz ScheDFR).
@@ -37,6 +37,7 @@ VARIANTS=(
   "cool-vq8k-from-backbone-n210-dfr40    cool-vq8k-from-backbone-n210-12500    dfr  8192"
   "coolmelt-vq8k-n210-dfr40              cool-vq8k-n210-12500                  dfr  8192"
   "cool-fsq18k-from-backbone-n210-dfr40  cool-fsq18k-from-backbone-n210-12500  dfr  18225"
+  "coolmelt-fsq18k-n210-dfr40            cool-fsq18k-n210-12500                dfr  18225"
 )
 
 ROW="${VARIANTS[$SLURM_ARRAY_TASK_ID]}"
