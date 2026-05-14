@@ -89,6 +89,25 @@ def _decode_dfr(decoder, vq_emb: torch.Tensor, dfr: SchedDFR, device: str) -> tu
     return out, comp_ratio, list(encoded.encoding_lengths)
 
 
+def _decode_fixed(decoder, vq_emb: torch.Tensor, rs: float, device: str) -> tuple[np.ndarray, float, list[int]]:
+    # Paper's "fixed-rate merge" baseline: split encoder frames into uniform
+    # groups of size `rs` and replace each by its mean. Same mean-broadcast
+    # apply as ScheDFR, but with no DP search over segment lengths.
+    s = int(round(rs))
+    tokens = vq_emb.squeeze(0).T.detach().cpu().float().numpy()  # [T_enc, C]
+    T_enc = tokens.shape[0]
+    n_full = T_enc // s
+    leftover = T_enc - n_full * s
+    encoding_lengths = [s] * n_full + ([leftover] if leftover else [])
+    downsampled = SchedDFR.down_sample(tokens, encoding_lengths)
+    replicated = SchedDFR.up_sample(downsampled, encoding_lengths)
+    comp_ratio = T_enc / len(downsampled)
+    t_comp = torch.from_numpy(replicated.T).float().unsqueeze(0).to(device)
+    vq_post, _, _ = decoder(t_comp, vq=True)
+    out = decoder(vq_post, vq=False).squeeze(0).squeeze(0).cpu().numpy()
+    return out, comp_ratio, encoding_lengths
+
+
 def _try_metric(fn, *args, **kwargs):
     try:
         return float(fn(*args, **kwargs))
@@ -107,8 +126,10 @@ def main() -> None:
     ap.add_argument("--manifest", required=True, type=Path)
     ap.add_argument("--audio-root", required=True, type=Path,
                     help="parent dir of `relpath` (e.g. datasets/LibriTTS or datasets/LibriSpeech)")
-    ap.add_argument("--mode", required=True, choices=["ffr", "dfr"])
-    ap.add_argument("--rs", type=float, default=2.0, help="DFR down-sample ratio")
+    ap.add_argument("--mode", required=True, choices=["ffr", "dfr", "fixed"],
+                    help="ffr=no downsample (80Hz), fixed=uniform Rs-frame mean (40Hz), "
+                         "dfr=ScheDFR DP (40Hz)")
+    ap.add_argument("--rs", type=float, default=2.0, help="DFR/fixed down-sample ratio")
     ap.add_argument("--u", type=int, default=4, help="DFR max compression length")
     ap.add_argument("--out-dir", required=True, type=Path)
     ap.add_argument("--codebook-size", type=int, required=True,
@@ -137,6 +158,8 @@ def main() -> None:
     print(f"[codec] {model_name} ckpt={args.ckpt.name} device={args.device}")
 
     dfr = SchedDFR(down_sample_ratio=args.rs, max_compression=args.u) if args.mode == "dfr" else None
+    if args.mode == "fixed" and abs(args.rs - round(args.rs)) > 1e-6:
+        raise SystemExit(f"--mode fixed requires integer --rs (got {args.rs})")
 
     whisper_model = None
     use_wer = not args.no_wer and eval_metrics._whisper is not None and eval_metrics._jiwer is not None
@@ -160,6 +183,8 @@ def main() -> None:
                 recon = _decode_ffr(decoder, vq_emb)
                 comp_ratio = 1.0
                 encoding_lengths: list[int] = []
+            elif args.mode == "fixed":
+                recon, comp_ratio, encoding_lengths = _decode_fixed(decoder, vq_emb, args.rs, args.device)
             else:
                 recon, comp_ratio, encoding_lengths = _decode_dfr(decoder, vq_emb, dfr, args.device)
 
@@ -195,6 +220,8 @@ def main() -> None:
 
         rows.append(row)
 
+    # Duration bits are needed only for ScheDFR; the fixed-merge schedule is
+    # known a priori, and FFR has no per-frame schedule at all.
     duration_bits = math.ceil(math.log2(args.u)) if args.mode == "dfr" else 0
     mean_comp_ratio = float(np.mean([r["comp_ratio"] for r in rows])) if rows else 1.0
     bits_per_frame = math.log2(args.codebook_size) + duration_bits
