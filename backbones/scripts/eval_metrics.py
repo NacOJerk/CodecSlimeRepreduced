@@ -54,12 +54,20 @@ _utmos_predictor = None
 
 # ── metric functions ──────────────────────────────────────────────────────────
 
-def compute_wer(orig: np.ndarray, recon: np.ndarray, model) -> float:
-    # pass float32 numpy arrays at 16 kHz — avoids ffmpeg dependency
-    orig_text  = model.transcribe(orig.astype(np.float32))["text"].strip().lower()
-    recon_text = model.transcribe(recon.astype(np.float32))["text"].strip().lower()
+def compute_wer(orig: np.ndarray, recon: np.ndarray, model,
+                reference_text: str | None = None) -> float:
+    # pass float32 numpy arrays at 16 kHz, avoids ffmpeg dependency.
+    # When `reference_text` is provided we compare the recon transcript to the
+    # supplied reference (paper-standard WER). Otherwise we fall back to
+    # Whisper-of-orig vs Whisper-of-recon for back-compat with dev-clean runs
+    # where no reference text is available.
     import jiwer
-    return jiwer.wer(orig_text, recon_text)
+    recon_text = model.transcribe(recon.astype(np.float32))["text"].strip().lower()
+    if reference_text is not None:
+        ref = reference_text.strip().lower()
+    else:
+        ref = model.transcribe(orig.astype(np.float32))["text"].strip().lower()
+    return jiwer.wer(ref, recon_text)
 
 
 def compute_stoi(orig: np.ndarray, recon: np.ndarray, sr: int) -> float:

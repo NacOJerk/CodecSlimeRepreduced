@@ -18,3 +18,5 @@ jiwer==4.0.0
 pystoi==0.4.1
 pesq==0.0.4
 resemblyzer==0.1.4
+# resemblyzer -> webrtcvad needs pkg_resources, which setuptools 70+ removed
+setuptools<70
