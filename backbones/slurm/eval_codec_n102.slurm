@@ -27,8 +27,9 @@ VARIANTS=(
   "backbone-fsq18k-ffr80    fsq18k-300k              ffr    18225"
   "backbone-fsq18k-ffr40    fsq18k-300k              fixed  18225"
   "backbone-fsq18k-dfr40    fsq18k-300k              dfr    18225"
-  "melt-vq8k-n210-ffr40     melt-vq8k-n210-12500     fixed  8192"
-  "melt-vq8k-n210-dfr40     melt-vq8k-n210-12500     dfr    8192"
+  # melt-vq8k-n210-12500 stopped at step 7500/12500 (not finished); excluded.
+  "DISABLED-not-finished    melt-vq8k-n210-12500     ffr    8192"
+  "DISABLED-not-finished    melt-vq8k-n210-12500     ffr    8192"
   "melt-fsq18k-n210-ffr40   melt-fsq18k-n210-12500   fixed  18225"
   "melt-fsq18k-n210-dfr40   melt-fsq18k-n210-12500   dfr    18225"
   "melt-vq8k-n210-paperd-ffr40  melt-vq8k-n210-paperd-12500  fixed  8192"
@@ -40,6 +41,10 @@ read VARIANT CKPT_DIR MODE CODEBOOK <<< "$ROW"
 CKPT=$REPO/backbones/checkpoints/$CKPT_DIR/last.ckpt
 OUT=$REPO/backbones/results/eval-$VARIANT
 
+if [[ "$VARIANT" == DISABLED* ]]; then
+    echo "[skip] $VARIANT marked DISABLED (model not finished)"
+    exit 0
+fi
 if [ ! -f "$CKPT" ]; then
     echo "[skip] $CKPT not present; nothing to eval for $VARIANT"
     exit 0
