@@ -58,3 +58,19 @@ backbones/data/
 backbones/slurm/logs/
 backbones/checkpoints/
 CLAUDE.md
+
+# Per-cell raw evaluation outputs (500 wav pairs each, regenerable from
+# evaluate_codec.py). Only the curated `final/` bundle is tracked.
+backbones/results/eval-*/
+backbones/results/smoke-eval-*/
+backbones/results/all_metrics.csv
+
+# Hydra run dirs (resolved configs + wandb), regenerable from training
+outputs/
+
+# Local LaTeX source extracted from the paper PDF
+papers/codecslime_*_source/
+
+# Editor / IDE state
+.claude/
+.idea/

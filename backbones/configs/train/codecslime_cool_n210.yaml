@@ -54,6 +54,10 @@ compression:
   kind: cool
   down_sample_ratio: 2.0
   max_compression: 4
+  # Parallelize the per-batch-item DP across joblib workers. Must not exceed
+  # SLURM cpus-per-task on the run host. Pure implementation knob; output is
+  # identical to n_jobs=1.
+  n_jobs: 16
 
 logger:
   _target_: pytorch_lightning.loggers.WandbLogger

@@ -25,6 +25,12 @@ export PYTHONUNBUFFERED=1
 # PYTORCH_CUDA_ALLOC_CONF is CUDA-only, harmless on ROCm but skip it to be tidy.
 export MIOPEN_FIND_MODE=NORMAL
 
+# Keep BLAS thread count at 1 per process so joblib's per-item workers do not
+# oversubscribe the slurm cpus-per-task allocation.
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+
 mkdir -p "$LOG_DIR"
 
 if [ ! -f "$REPO/backbones/data/librispeech_train.txt" ]; then

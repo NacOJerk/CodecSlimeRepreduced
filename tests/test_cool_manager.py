@@ -86,3 +86,27 @@ def test_compress_uses_mean_broadcast():
 
     expected = _expected_means_per_segment(x, lengths_per_item)
     assert torch.allclose(out, expected, atol=1e-6)
+
+
+def test_compress_parallel_parity_with_sequential():
+    """joblib n_jobs>1 must produce bit-identical output to n_jobs=1."""
+    torch.manual_seed(0)
+    x = torch.randn(8, 4, 16)
+    cm_seq = CoolManager(down_sample_ratio=2.0, max_compression=4, n_jobs=1)
+    cm_par = CoolManager(down_sample_ratio=2.0, max_compression=4, n_jobs=4)
+    out_seq = cm_seq.compress(x)
+    out_par = cm_par.compress(x)
+    assert torch.allclose(out_seq, out_par)
+
+
+def test_compress_deepcopy_before_use():
+    """Lightning save_hyperparameters deepcopies __init__ args; with n_jobs>1
+    we must remain deepcopy-friendly at construction time (lazy pool)."""
+    import copy
+    cm = CoolManager(down_sample_ratio=2.0, max_compression=4, n_jobs=4)
+    cm_copy = copy.deepcopy(cm)
+    assert cm_copy.n_jobs == 4
+    x = torch.randn(2, 3, 8)
+    out_orig = cm.compress(x)
+    out_copy = cm_copy.compress(x)
+    assert torch.allclose(out_orig, out_copy)

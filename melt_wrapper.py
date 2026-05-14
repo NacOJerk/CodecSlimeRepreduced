@@ -12,11 +12,37 @@ from common.schedulers import WarmupLR
 from melt_manager import MeltManager
 
 
+_RUNTIME_HPARAM_KEYS = ('melt_manager', 'cool_manager')
+
+
+def _strip_runtime_hparams(obj):
+    """Remove stateful runtime objects from a Lightning module's saved hparams.
+
+    The Cool stage's ``CoolManager`` holds a ``joblib.Parallel`` pool whose
+    thread locks cannot be pickled. Lightning's ``save_hyperparameters``
+    captures every ``__init__`` kwarg and stores it under ``_hparams`` /
+    ``_hparams_initial``, which is then pickled into every checkpoint. We
+    drop the manager kwargs from those dicts after construction; they are
+    re-supplied by the caller at every load and so do not need to round-trip
+    through the checkpoint.
+    """
+    for k in _RUNTIME_HPARAM_KEYS:
+        for attr in ('_hparams', '_hparams_initial'):
+            container = getattr(obj, attr, None)
+            if container is None:
+                continue
+            try:
+                del container[k]
+            except (KeyError, AttributeError, TypeError):
+                pass
+
+
 class CoolMeltWrapper(CodecLightningModule):
     def __init__(self, cfg,
                  melt_manager: Optional[MeltManager] = None,
                  cool_manager=None):
         super().__init__(cfg)
+        _strip_runtime_hparams(self)
         self.melt_manager = melt_manager
         self.cool_manager = cool_manager
         self._compression_kind = cfg.train.compression.kind

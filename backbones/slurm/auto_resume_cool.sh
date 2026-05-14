@@ -20,6 +20,12 @@ export VIRTUAL_ENV=$VENV
 export PYTHONPATH=$REPO:$BIGCODEC:${PYTHONPATH:-}
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 
+# Keep BLAS thread count at 1 per process so joblib's per-item workers do not
+# oversubscribe the slurm cpus-per-task allocation.
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+
 mkdir -p "$LOG_DIR"
 
 # Build filelists if not present (same as backbone setup)

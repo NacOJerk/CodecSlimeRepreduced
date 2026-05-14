@@ -68,6 +68,7 @@ def _build_compression(cfg):
         cm = CoolManager(
             down_sample_ratio=cfg.train.compression.down_sample_ratio,
             max_compression=cfg.train.compression.max_compression,
+            n_jobs=cfg.train.compression.get("n_jobs", 1),
         )
         return None, cm
     raise ValueError(f"Unknown compression.kind: {kind!r}")
