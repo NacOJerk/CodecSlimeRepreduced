@@ -1,0 +1,68 @@
+trainer:
+  accelerator: 'gpu'
+  devices: 1
+  min_steps: 100000
+  max_steps: 100000
+  precision: 16-mixed
+  limit_val_batches: 0
+  num_sanity_val_steps: 0
+  accumulate_grad_batches: 1
+
+lambdas:
+  lambda_disc: 1.0
+  lambda_feat_match_loss: 1.0
+  lambda_mel_loss: 15.0
+  lambda_adv: 1.0
+  lambda_stft_loss: 1.0
+
+use_mel_loss: true
+use_feat_match_loss: true
+
+stft_loss_params:
+  fft_sizes: [128, 256, 512, 1024, 2048]
+  hop_sizes: [32, 64, 128, 256, 512]
+  win_lengths: [128, 256, 512, 1024, 2048]
+  window: hann_window
+
+gen_optim_params:
+  lr: 1.0
+  betas: [0.8, 0.9]
+disc_optim_params:
+  lr: 1.0
+  betas: [0.8, 0.9]
+gen_grad_clip: 1.0
+disc_grad_clip: 1.0
+
+# Paper Cool LR (paper Sec 3.1): linear 4e-5 -> 1e-5 over 100k steps with
+# 1000-step warmup. Used verbatim on L40s batch 16, matching the Melt L40s
+# convention of "paper-literal LR despite double batch."
+gen_schedule_params:
+  warmup_step: 1000
+  down_step: 99000
+  min_lr: 1.0e-5
+  max_lr: 4.0e-5
+disc_schedule_params:
+  warmup_step: 1000
+  down_step: 99000
+  min_lr: 1.0e-5
+  max_lr: 4.0e-5
+
+freeze_encoder: true
+
+compression:
+  kind: cool
+  down_sample_ratio: 2.0
+  max_compression: 4
+
+logger:
+  _target_: pytorch_lightning.loggers.WandbLogger
+  project: codecslime-cool
+  entity: dortiroshtau-tel-aviv-university
+  name: ???
+  resume: allow
+  id: ???
+
+checkpoint:
+  every_n_train_steps: 5000
+  save_top_k: 3
+  save_last: true

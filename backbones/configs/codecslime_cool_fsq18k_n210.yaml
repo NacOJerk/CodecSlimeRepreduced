@@ -1,0 +1,18 @@
+defaults:
+  - preprocess: default
+  - dataset: librispeech_b64
+  - model: fsq18k
+  - train: codecslime_cool_n210
+  - _self_
+
+log_dir: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/checkpoints/cool-fsq18k-n210-12500
+backbone_ckpt: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/checkpoints/melt-fsq18k-n210-12500/last.ckpt
+debug: false
+ckpt: null
+input_dir: null
+output_dir: null
+
+hydra:
+  output_subdir: hydra
+  job:
+    chdir: True

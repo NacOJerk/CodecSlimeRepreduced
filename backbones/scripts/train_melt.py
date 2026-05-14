@@ -21,6 +21,7 @@ sys.path.insert(0, str(REPO_ROOT / "external" / "BigCodec"))
 
 from data_module import DataModule
 from melt_manager import MeltManager
+from cool_manager import CoolManager
 from melt_wrapper import CoolMeltWrapper
 
 
@@ -64,7 +65,11 @@ def _build_compression(cfg):
         )
         return mm, None
     if kind == "cool":
-        raise NotImplementedError("Cool training not yet implemented; awaiting CoolManager")
+        cm = CoolManager(
+            down_sample_ratio=cfg.train.compression.down_sample_ratio,
+            max_compression=cfg.train.compression.max_compression,
+        )
+        return None, cm
     raise ValueError(f"Unknown compression.kind: {kind!r}")
 
 
