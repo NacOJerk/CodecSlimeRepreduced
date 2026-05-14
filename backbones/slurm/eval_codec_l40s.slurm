@@ -10,7 +10,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=1-00:00:00
-#SBATCH --array=0-13
+#SBATCH --array=0-14
 
 # Sister of eval_codec_n102.slurm targeting the killable L40s pool instead of
 # n-102. Identical 12-cell VARIANTS list; submit via `sbatch --array=...` with
@@ -34,8 +34,9 @@ VARIANTS=(
   "melt-fsq18k-n210-dfr40   melt-fsq18k-n210-12500   dfr    18225"
   "melt-vq8k-n210-paperd-ffr40  melt-vq8k-n210-paperd-12500  fixed  8192"
   "melt-vq8k-n210-paperd-dfr40  melt-vq8k-n210-paperd-12500  dfr    8192"
-  "cool-vq8k-from-backbone-n210-dfr40  cool-vq8k-from-backbone-n210-12500  dfr  8192"
-  "coolmelt-vq8k-n210-dfr40            cool-vq8k-n210-12500                dfr  8192"
+  "cool-vq8k-from-backbone-n210-dfr40    cool-vq8k-from-backbone-n210-12500    dfr  8192"
+  "coolmelt-vq8k-n210-dfr40              cool-vq8k-n210-12500                  dfr  8192"
+  "cool-fsq18k-from-backbone-n210-dfr40  cool-fsq18k-from-backbone-n210-12500  dfr  18225"
 )
 
 ROW="${VARIANTS[$SLURM_ARRAY_TASK_ID]}"
