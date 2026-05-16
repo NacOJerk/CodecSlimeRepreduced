@@ -1,29 +1,32 @@
-# CodecSlime
+# CodecSlime (audio_ml_tau_final)
 
-This repository contains a re-implementation of **CodecSlime** (Wang et al., arXiv 2506.21074), a plugin-style dynamic frame rate (DFR) wrapper for speech codecs. 
+This repository contains a re-implementation of **CodecSlime** (Wang et al., arXiv 2506.21074), a plugin-style dynamic frame rate (DFR) wrapper for speech codecs. This project was developed as a TAU course final project.
 
-CodecSlime uses a two-stage post-training pipeline (**Melt-and-Cool**) on top of a fixed-rate backbone (BigCodec) to achieve high-quality speech compression at variable bitrates.
+CodecSlime uses a two-stage post-training pipeline (**Melt-and-Cool**) on top of a fixed-rate backbone (BigCodec) to achieve high-quality speech compression at variable bitrates. It consists of two primary innovations:
+- **ScheDFR** (`sched_dfr.py`): A DP-based dynamic frame rate inference scheduler.
+- **Melt-and-Cool** (`melt_manager.py`, `cool_manager.py`): A two-stage training recipe for adapting FFR models to DFR.
 
 ## Repository Structure
 
-- `backbones/`: Configuration, scripts, and results for the codec models.
-- `datasets/`: Directory for LibriSpeech and LibriTTS datasets (gitignored).
-- `external/`: External dependencies, including the BigCodec backbone.
-- `docs/`: Additional documentation and training plans.
-- `papers/`: The original CodecSlime paper.
+```text
+backbones/
+  scripts/        Python entry points (train / eval / data prep)
+  configs/        Hydra YAMLs (model + train + entry points)
+  slurm/          SLURM launchers
+  checkpoints/    Trained model weights (gitignored)
+  data/           Manifests: librispeech_*.txt, unicats_b.txt
+  results/        Reconstructed audio + metrics per evaluation run
+datasets/         Directory for LibriSpeech and LibriTTS datasets (gitignored)
+external/BigCodec Vendored BigCodec backbone (gitignored, commit pinned)
+docs/             Additional documentation and training plans
+papers/           The original CodecSlime paper PDF + LaTeX source
+```
 
 ## Setup Instructions
 
-### 1. Clone the Repository
+### 1. Setup BigCodec Backbone
 
-```bash
-git clone <repository_url>
-cd audio_ml_tau_final
-```
-
-### 2. Setup BigCodec Backbone
-
-The BigCodec backbone is vendored in `external/BigCodec`. This directory already exists and contains project-specific modifications. To populate the remaining backbone files from the upstream repository (using the commit pinned in `external/BIGCODEC_COMMIT.txt`) without overwriting existing files:
+The BigCodec backbone is vendored in `external/BigCodec`. To populate the remaining backbone files from the upstream repository (using the commit pinned in `external/BIGCODEC_COMMIT.txt`) without overwriting existing project-specific modifications:
 
 ```bash
 # Clone upstream to a temporary location
@@ -37,7 +40,7 @@ cp -rn external/BigCodec_upstream/* external/BigCodec/
 rm -rf external/BigCodec_upstream
 ```
 
-### 3. Environment Setup
+### 2. Environment Setup
 
 Create a virtual environment and install the required dependencies.
 
@@ -47,9 +50,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-*Note: For AMD/ROCm users, refer to `docs/n210_amd_setup.md` for specific environment instructions.*
+*Note: For AMD/ROCm users (e.g., node n-210), refer to `docs/n210_amd_setup.md` for specific environment instructions.*
 
-### 4. Data Preparation
+### 3. Data Preparation
 
 Download and prepare the LibriSpeech (for training) and LibriTTS (for evaluation) datasets.
 
@@ -58,11 +61,17 @@ Download and prepare the LibriSpeech (for training) and LibriTTS (for evaluation
 python backbones/scripts/prepare_librispeech.py --root datasets
 python backbones/scripts/prepare_libritts.py --root datasets --subsets test-clean
 
-# Build the UniCATS testset B manifest
+# Build the UniCATS testset B manifest (500 utts, 37 unseen speakers)
 python backbones/scripts/prepare_unicats_b.py --out-dir backbones/data
 ```
 
 ## Reproduction Workflow
+
+Note currently the account in the slurm files uses a placeholder:
+```
+--account=<your_account>
+```
+Please update it to the currect one
 
 ### Stage 1: Backbone Training (FFR)
 
@@ -75,11 +84,16 @@ sbatch backbones/slurm/train_fsq18k.slurm
 
 ### Stage 2: Melt Post-Training
 
-Apply the random-rate downsampling curriculum to train the model to tolerate arbitrary segment lengths.
+Apply the random-rate downsampling curriculum (`MeltManager`) to train the model to tolerate arbitrary segment lengths.
 
 ```bash
+# L40s cluster, batch 16, 100k steps (paper-literal LR)
 sbatch backbones/slurm/train_melt_vq8k.slurm
 sbatch backbones/slurm/train_melt_fsq18k.slurm
+
+# AMD n-210 cluster, batch 64, 12.5k steps (sqrt-scaled LR)
+sbatch backbones/slurm/train_melt_vq8k_n210.slurm
+sbatch backbones/slurm/train_melt_fsq18k_n210.slurm
 ```
 
 ### Stage 3: Cool Fine-Tuning
@@ -87,13 +101,17 @@ sbatch backbones/slurm/train_melt_fsq18k.slurm
 Fine-tune the quantizer and decoder with ScheDFR enabled while freezing the encoder.
 
 ```bash
+# Standard pipeline (Full Melt+Cool)
 sbatch backbones/slurm/train_cool_vq8k_n210.slurm
 sbatch backbones/slurm/train_cool_fsq18k_n210.slurm
+
+# Ablation: Cool from backbone only (no Melt)
+sbatch backbones/slurm/train_cool_vq8k.slurm
 ```
 
 ### Stage 4: Evaluation
 
-Evaluate the resulting model using the `evaluate_codec.py` script. This script computes WER, STOI, PESQ, SECS, and UTMOS.
+Evaluate models using the `evaluate_codec.py` script. It computes WER, STOI, PESQ, SECS, and UTMOS.
 
 ```bash
 python backbones/scripts/evaluate_codec.py \
@@ -105,19 +123,49 @@ python backbones/scripts/evaluate_codec.py \
     --codebook-size 18225 --whisper-model base
 ```
 
-## Evaluation Matrix
+Alternatively, run the full 12-cell evaluation matrix via SLURM:
+```bash
+sbatch backbones/slurm/eval_codec.slurm
+```
 
-The following variants are evaluated in the paper and this re-implementation:
+## Evaluation Matrix & Metrics
+
+### Matrix Variants
 
 | Variant | Mode | Codebook | Target Bitrate |
 |---|---|---|---|
-| Backbone VQ-8k | FFR | 8192 | 1040 bps |
-| Backbone VQ-8k | DFR | 8192 | 600 bps |
-| Melt VQ-8k | DFR | 8192 | 600 bps |
-| CodecSlime (Melt+Cool) | DFR | 8192 | 600 bps |
+| backbone-vq8k-ffr | ffr | 8192 | 1040 bps |
+| backbone-vq8k-dfr | dfr | 8192 | 600 bps |
+| melt-vq8k-n210 | dfr | 8192 | 600 bps |
+| meltcool-vq8k-n210 | dfr | 8192 | 600 bps |
+| backbone-fsq18k-ffr | ffr | 18225 | 1132 bps |
+| meltcool-fsq18k-n210 | dfr | 18225 | 646 bps |
 
-Refer to the main `README.md` (original) or `backbones/results/final/all_metrics.md` for detailed results.
+*Refer to `backbones/results/final/all_metrics.md` for the full results.*
+
+**Bitrate Formula:** `(log2(codebook) + ceil(log2(U))) * encoder_fr / mean_comp_ratio`
+
+### Metrics Details
+
+| Metric | Direction | Backend | Notes |
+|---|---|---|---|
+| Bitrate | n/a | Closed form | Includes duration bits for DFR |
+| WER | lower better | OpenAI Whisper (`base`) | Transcription accuracy |
+| STOI | higher better | pystoi | Intelligibility |
+| PESQ | higher better | pesq (wb) | Perceptual quality (16 kHz) |
+| SECS | higher better | Resemblyzer | Speaker similarity |
+| UTMOS | higher better | SpeechMOS | Neural MOS predictor |
+
+## SLURM Cluster Notes
+
+| Node Class | Partition | Time | GPU Type |
+|---|---|---|---|
+| t-100 | gpu-morgeva | 5 days | gpu:h100:1 |
+| n-801..805 | killable | 1 day | gpu:l40s:1 |
+| n-210 | gpu-morgeva | 12 h | gpu:amd:1 |
+
+Use `--account=gpu-research` for all jobs. 
 
 ## Contributing
 
-This project was developed as part of a TAU course final project. For more details on the implementation decisions, see the documentation in the `docs/` folder.
+This project was developed as part of a TAU course final project. For more details on implementation decisions, see the documentation in the `docs/` folder.
