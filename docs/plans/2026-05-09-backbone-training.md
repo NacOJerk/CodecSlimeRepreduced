@@ -100,23 +100,23 @@ external/BigCodec/
 - [ ] **Step 2: Create `external/` placeholder so the dir is tracked**
 
 ```bash
-mkdir -p /home/morg/students/dortirosh/audio_ml_tau_final/external
-touch /home/morg/students/dortirosh/audio_ml_tau_final/external/.gitkeep
+mkdir -p ./external
+touch ./external/.gitkeep
 ```
 
 - [ ] **Step 3: Clone BigCodec at a pinned commit**
 
 ```bash
-cd /home/morg/students/dortirosh/audio_ml_tau_final/external
+cd ./external
 git clone https://github.com/Aria-K-Alethia/BigCodec.git
 cd BigCodec
-git rev-parse HEAD > /home/morg/students/dortirosh/audio_ml_tau_final/external/BIGCODEC_COMMIT.txt
+git rev-parse HEAD > ./external/BIGCODEC_COMMIT.txt
 ```
 
 - [ ] **Step 4: Verify the expected files exist**
 
 ```bash
-ls /home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec/{train.py,preprocess.py,lightning_module.py,vq/codec_decoder.py,config/default.yaml}
+ls ./external/BigCodec/{train.py,preprocess.py,lightning_module.py,vq/codec_decoder.py,config/default.yaml}
 ```
 
 Expected: all five paths print without error.
@@ -139,8 +139,8 @@ git commit -m "vendor BigCodec under external/ (gitignored)"
 - [ ] **Step 1: Pick env path and create the venv**
 
 ```bash
-python3.10 -m venv /home/morg/students/dortirosh/envs/codecslime
-source /home/morg/students/dortirosh/envs/codecslime/bin/activate
+python3.10 -m venv <VENV_PATH>/codecslime
+source <VENV_PATH>/codecslime/bin/activate
 python --version  # expect Python 3.10.x
 pip install --upgrade pip
 ```
@@ -169,7 +169,7 @@ Pinned versions: BigCodec is light on version constraints; pinning here avoids f
 - [ ] **Step 3: Install**
 
 ```bash
-pip install -r /home/morg/students/dortirosh/audio_ml_tau_final/requirements.txt
+pip install -r ./requirements.txt
 ```
 
 - [ ] **Step 4: Verify imports**
@@ -206,9 +206,9 @@ git commit -m "pin training-stack requirements (Python 3.10, torch 2.4, lightnin
 - [ ] **Step 1: Reserve a dataset directory inside the project**
 
 ```bash
-mkdir -p /home/morg/students/dortirosh/audio_ml_tau_final/datasets
-df -h /home/morg/students/dortirosh/audio_ml_tau_final/datasets/   # confirm > 100 GB free
-echo "datasets/" >> /home/morg/students/dortirosh/audio_ml_tau_final/.gitignore
+mkdir -p ./datasets
+df -h ./datasets/   # confirm > 100 GB free
+echo "datasets/" >> ./.gitignore
 ```
 
 - [ ] **Step 2: Write the download script**
@@ -256,9 +256,9 @@ if __name__ == "__main__":
 - [ ] **Step 3: Run download (this takes ~1-2 hours on a fast link)**
 
 ```bash
-cd /home/morg/students/dortirosh/audio_ml_tau_final
+cd ./
 python backbones/scripts/prepare_librispeech.py \
-    --root /home/morg/students/dortirosh/audio_ml_tau_final/datasets
+    --root ./datasets
 ```
 
 Expected ending:
@@ -269,9 +269,9 @@ Expected ending:
 - [ ] **Step 4: Sanity-check the extracted layout**
 
 ```bash
-ls /home/morg/students/dortirosh/audio_ml_tau_final/datasets/LibriSpeech/
+ls ./datasets/LibriSpeech/
 # expect: train-clean-100  train-clean-360  train-other-500  dev-clean  test-clean
-find /home/morg/students/dortirosh/audio_ml_tau_final/datasets/LibriSpeech/train-clean-100 -name "*.flac" | head -3
+find ./datasets/LibriSpeech/train-clean-100 -name "*.flac" | head -3
 # expect: three FLAC paths
 ```
 
@@ -280,21 +280,21 @@ find /home/morg/students/dortirosh/audio_ml_tau_final/datasets/LibriSpeech/train
 BigCodec's `preprocess.py` writes a flat list of `.flac` paths. Run it through Hydra, pointing at our in-project root:
 
 ```bash
-cd /home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec
+cd ./external/BigCodec
 mkdir -p filelists
 python preprocess.py \
     hydra.output_subdir=null hydra.job.chdir=False \
-    preprocess.datasets.LibriSpeech.root=/home/morg/students/dortirosh/audio_ml_tau_final/datasets/LibriSpeech \
-    preprocess.view.train_filelist=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_train.txt \
-    preprocess.view.test_filelist=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_test.txt
+    preprocess.datasets.LibriSpeech.root=../../datasets/LibriSpeech \
+    preprocess.view.train_filelist=../../backbones/data/librispeech_train.txt \
+    preprocess.view.test_filelist=../../backbones/data/librispeech_test.txt
 ```
 
 Then:
 ```bash
-mkdir -p /home/morg/students/dortirosh/audio_ml_tau_final/backbones/data
-wc -l /home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_train.txt
+mkdir -p ./backbones/data
+wc -l ./backbones/data/librispeech_train.txt
 # expect ~281k lines (100h: ~28k + 360h: ~104k + 500h: ~149k)
-wc -l /home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_test.txt
+wc -l ./backbones/data/librispeech_test.txt
 # expect ~2700 lines (dev-clean)
 ```
 
@@ -328,17 +328,17 @@ dataset:
   _target_: data_module.FSDataset
 
 train:
-  filelist: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_train.txt
+  filelist: ./backbones/data/librispeech_train.txt
   batch_size: 8
   shuffle: true
 
 val:
-  filelist: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_test.txt
+  filelist: ./backbones/data/librispeech_test.txt
   batch_size: 8
   shuffle: false
 
 test:
-  filelist: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_test.txt
+  filelist: ./backbones/data/librispeech_test.txt
   batch_size: 1
   shuffle: false
 
@@ -498,7 +498,7 @@ defaults:
   - model: vq8k
   - train: codecslime_300k
 
-log_dir: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/checkpoints/vq8k
+log_dir: ./backbones/checkpoints/vq8k
 debug: false
 ckpt: null
 input_dir: null
@@ -519,7 +519,7 @@ defaults:
   - model: fsq18k
   - train: codecslime_300k
 
-log_dir: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/checkpoints/fsq18k
+log_dir: ./backbones/checkpoints/fsq18k
 debug: false
 ckpt: null
 input_dir: null
@@ -536,12 +536,12 @@ hydra:
 BigCodec's `train.py` calls `@hydra.main(version_base=None, config_path="config", config_name="default")` from inside the BigCodec dir. We override `config_path` via `--config-dir` at CLI, so no symlinking needed. Verify Hydra discovery now:
 
 ```bash
-cd /home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec
+cd ./external/BigCodec
 python -c "
 from hydra import initialize_config_dir, compose
 from hydra.core.global_hydra import GlobalHydra
 GlobalHydra.instance().clear()
-with initialize_config_dir(config_dir='/home/morg/students/dortirosh/audio_ml_tau_final/backbones/configs', version_base=None):
+with initialize_config_dir(config_dir='./backbones/configs', version_base=None):
     cfg = compose(config_name='codecslime_vq8k')
 print(cfg.train.trainer.max_steps, cfg.model.codec_decoder.codebook_size)
 "
@@ -575,7 +575,7 @@ The FSQ wrapper has the same call surface as `ResidualVQ`'s forward in `codec_de
 """FSQ with levels [3,3,3,3,3,3,5,5] should yield exactly 18225 codes."""
 import sys
 import torch
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec")
+sys.path.insert(0, "./external/BigCodec")
 
 from vq.fsq_quantizer import FSQQuantizer
 
@@ -587,7 +587,7 @@ def test_codebook_size_18225():
 - [ ] **Step 2: Run the test, expect ImportError**
 
 ```bash
-cd /home/morg/students/dortirosh/audio_ml_tau_final
+cd ./
 pytest backbones/tests/test_fsq_codebook_size.py -v
 ```
 
@@ -634,7 +634,7 @@ pytest backbones/tests/test_fsq_codebook_size.py -v
 ```python
 import sys
 import torch
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec")
+sys.path.insert(0, "./external/BigCodec")
 
 from vq.fsq_quantizer import FSQQuantizer
 
@@ -679,7 +679,7 @@ CodecDecoder hardcodes `ResidualVQ`. We add a single branch keyed off `quantizer
 
 ```bash
 grep -n "ResidualVQ\|def __init__\|def forward\|quantizer" \
-    /home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec/vq/codec_decoder.py
+    ./external/BigCodec/vq/codec_decoder.py
 ```
 
 Note the line numbers for `ResidualVQ(...)` instantiation and `def __init__`.
@@ -692,7 +692,7 @@ Note the line numbers for `ResidualVQ(...)` instantiation and `def __init__`.
 """CodecDecoder must accept quantizer_type='fsq' and produce the right output shape."""
 import sys
 import torch
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec")
+sys.path.insert(0, "./external/BigCodec")
 
 from vq.codec_decoder import CodecDecoder
 
@@ -785,10 +785,10 @@ This catches config errors, dataloader bugs, OOMs, and W&B-init issues before th
 # 100-step single-GPU sanity run. Validates the full plumbing.
 set -euo pipefail
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
+REPO=./
 BIGCODEC=$REPO/external/BigCodec
 
-source /home/morg/students/dortirosh/envs/codecslime/bin/activate
+source <VENV_PATH>/codecslime/bin/activate
 export PYTHONPATH=$BIGCODEC:$PYTHONPATH
 
 cd $BIGCODEC
@@ -867,11 +867,11 @@ set -euo pipefail
 CFG=$1
 RUN=$2
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
+REPO=./
 BIGCODEC=$REPO/external/BigCodec
 LOG_DIR=$REPO/backbones/checkpoints/$RUN
 
-source /home/morg/students/dortirosh/envs/codecslime/bin/activate
+source <VENV_PATH>/codecslime/bin/activate
 export PYTHONPATH=$BIGCODEC:$PYTHONPATH
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 
@@ -906,8 +906,8 @@ Note: BigCodec's `train.py` reads `cfg.ckpt`; we'll need to verify that path act
 ```bash
 #!/bin/bash
 #SBATCH --job-name=cs-vq8k
-#SBATCH --output=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.out
-#SBATCH --error=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.err
+#SBATCH --output=./backbones/slurm/logs/%x_%j.out
+#SBATCH --error=./backbones/slurm/logs/%x_%j.err
 #SBATCH --partition=killable
 #SBATCH --account=gpu-research
 #SBATCH --nodes=1
@@ -918,7 +918,7 @@ Note: BigCodec's `train.py` reads `cfg.ckpt`; we'll need to verify that path act
 #SBATCH --time=24:00:00
 #SBATCH --signal=B:TERM@120
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
+REPO=./
 
 # Resubmit ourselves before SLURM kills us, so checkpointing has time to finish
 trap 'echo "[slurm] caught TERM, resubmitting"; sbatch $0; exit 0' TERM
@@ -933,8 +933,8 @@ If smoke test forced the 4-GPU fallback, change `--gres=gpu:l40s:1` to `--gres=g
 ```bash
 #!/bin/bash
 #SBATCH --job-name=cs-fsq18k
-#SBATCH --output=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.out
-#SBATCH --error=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.err
+#SBATCH --output=./backbones/slurm/logs/%x_%j.out
+#SBATCH --error=./backbones/slurm/logs/%x_%j.err
 #SBATCH --partition=killable
 #SBATCH --account=gpu-research
 #SBATCH --nodes=1
@@ -945,7 +945,7 @@ If smoke test forced the 4-GPU fallback, change `--gres=gpu:l40s:1` to `--gres=g
 #SBATCH --time=24:00:00
 #SBATCH --signal=B:TERM@120
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
+REPO=./
 
 trap 'echo "[slurm] caught TERM, resubmitting"; sbatch $0; exit 0' TERM
 
@@ -957,9 +957,9 @@ $REPO/backbones/slurm/auto_resume.sh codecslime_fsq18k fsq18k-300k
 - [ ] **Step 4: Verify the launcher in dry-run mode**
 
 ```bash
-bash -n /home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/auto_resume.sh
-bash -n /home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/train_vq8k.slurm
-bash -n /home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/train_fsq18k.slurm
+bash -n ./backbones/slurm/auto_resume.sh
+bash -n ./backbones/slurm/train_vq8k.slurm
+bash -n ./backbones/slurm/train_fsq18k.slurm
 ```
 
 Expected: no output (syntax OK).
@@ -990,7 +990,7 @@ L40S nodes are n-801..n-805 with 8 GPUs each, so two single-GPU jobs typically r
 - [ ] **Step 2: Submit VQ8k**
 
 ```bash
-cd /home/morg/students/dortirosh/audio_ml_tau_final
+cd ./
 sbatch backbones/slurm/train_vq8k.slurm
 ```
 

@@ -13,7 +13,7 @@ roughly an eighth of the wall time.
 
 ## Environment
 
-`/home/morg/students/dortirosh/envs/cs_amd`, fresh build. (The intended name
+`<VENV_PATH>/cs_amd`, fresh build. (The intended name
 was `codecslime_amd`; conda recorded it as `cs_amd` and we kept it to avoid
 churn. Slurm scripts and docs reference `cs_amd`.)
 

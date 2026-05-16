@@ -8,7 +8,7 @@ Melt-stage training on `n-210`. Original L40s/H100 runs are not affected.
 - One AMD GPU per job is plenty for batch 64 Melt training (paper used batch 8 on H100).
 
 ## Conda env: `codecslime_amd`
-Location: `/home/morg/students/dortirosh/envs/codecslime_amd`
+Location: `<VENV_PATH>/codecslime_amd`
 
 Differences vs `codecslime` (CUDA):
 - `torch==2.9.1+rocm6.4`, `torchaudio==2.9.1+rocm6.4`, `torchvision==0.24.1+rocm6.4`
