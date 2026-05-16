@@ -2,17 +2,17 @@ dataset:
   _target_: data_module.FSDataset
 
 train:
-  filelist: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_train.txt
+  filelist: backbones/data/librispeech_train.txt
   batch_size: 32
   shuffle: true
 
 val:
-  filelist: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_test.txt
+  filelist: backbones/data/librispeech_test.txt
   batch_size: 8
   shuffle: false
 
 test:
-  filelist: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/data/librispeech_test.txt
+  filelist: backbones/data/librispeech_test.txt
   batch_size: 1
   shuffle: false
 

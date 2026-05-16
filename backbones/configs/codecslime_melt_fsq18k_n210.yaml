@@ -5,8 +5,8 @@ defaults:
   - train: codecslime_melt_n210
   - _self_
 
-log_dir: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/checkpoints/melt-fsq18k-n210
-backbone_ckpt: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/checkpoints/fsq18k-300k/last.ckpt
+log_dir: backbones/checkpoints/melt-fsq18k-n210
+backbone_ckpt: backbones/checkpoints/fsq18k-300k/last.ckpt
 debug: false
 ckpt: null
 input_dir: null
