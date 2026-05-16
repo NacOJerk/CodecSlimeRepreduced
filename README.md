@@ -171,11 +171,11 @@ Use `--account=gpu-research` for all jobs.
 You can listen to audio samples demonstrating the compression and reconstruction quality across different model variants in the `backbones/results/samples/` directory. 
 
 For example, the samples for the FSQ-18K dynamic frame rate variant can be found here:
-[`backbones/results/samples/backbone-fsq18k-dfr40`](https://github.com/NacOJerk/audio_ml_tau_final/tree/main/backbones/results/samples/backbone-fsq18k-dfr40)
+[`backbones/results/samples/coolmelt-fsq18k-n210-dfr40`](https://github.com/NacOJerk/audio_ml_tau_final/tree/main/backbones/results/samples/coolmelt-fsq18k-n210-dfr40)
 
 Each sample set includes:
 * `*_orig.wav`: The original, uncompressed source audio.
-* `*_recon.wav`: The reconstructed audio after passing through the Melt-and-Cool codec pipeline.
+* `*_recon.wav`: The reconstructed audio after passing through the Melt-and-Cool trained codec pipeline.
 * `*_ref.txt`: The corresponding reference transcription text.
 
 ## Contributing
