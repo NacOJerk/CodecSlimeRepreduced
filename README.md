@@ -1,4 +1,4 @@
-# CodecSlime (audio_ml_tau_final)
+# CodecSlime
 
 This repository contains a re-implementation of **CodecSlime** (Wang et al., arXiv 2506.21074), a plugin-style dynamic frame rate (DFR) wrapper for speech codecs. This project was developed as a TAU course final project.
 
