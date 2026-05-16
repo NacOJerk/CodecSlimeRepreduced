@@ -1,7 +1,10 @@
+from pathlib import Path
 import sys
-import torch
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec")
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "external" / "BigCodec"))
+
+import torch
 from vq.fsq_quantizer import FSQQuantizer
 
 

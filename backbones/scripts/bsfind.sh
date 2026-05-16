@@ -6,12 +6,20 @@ set -euo pipefail
 BS=${1:?need batch size}
 RUN=${2:-bsfind-bs$BS-$(date +%s)}
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
-BIGCODEC=$REPO/external/BigCodec
-VENV=/home/morg/students/dortirosh/envs/codecslime
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derive REPO root (assuming depth of 2: backbones/scripts/ or backbones/slurm/)
+REPO="$(cd "$SCRIPT_DIR/../../" && pwd)"
 
-export PATH=$VENV/bin:${PATH:-}
-export VIRTUAL_ENV=$VENV
+# VENV should be activated by the user or set via environment variable
+VENV="${VENV:-$REPO/.venv}"
+if [ -d "$VENV" ]; then
+    export PATH="$VENV/bin:$PATH"
+    export VIRTUAL_ENV="$VENV"
+fi
+
+BIGCODEC=$REPO/external/BigCodec
+# VENV should be activated by the user or set via environment variable
 export PYTHONPATH=$BIGCODEC:${PYTHONPATH:-}
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 

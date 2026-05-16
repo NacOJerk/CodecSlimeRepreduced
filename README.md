@@ -1,96 +1,119 @@
-# audio_ml_tau_final
+# CodecSlime (audio_ml_tau_final)
 
-TAU course final project: from-scratch re-implementation of **CodecSlime**
-(Wang et al., arXiv 2506.21074). Plugin-style dynamic frame rate wrapper on a
-BigCodec VQ-GAN speech codec, with two components:
+This repository contains a re-implementation of **CodecSlime** (Wang et al., arXiv 2506.21074), a plugin-style dynamic frame rate (DFR) wrapper for speech codecs. This project was developed as a TAU course final project.
 
-- **ScheDFR** (`sched_dfr.py`): DP-based inference scheduler.
-- **Melt-and-Cool** (`melt_manager.py`, `cool_manager.py`): two-stage post-training.
+CodecSlime uses a two-stage post-training pipeline (**Melt-and-Cool**) on top of a fixed-rate backbone (BigCodec) to achieve high-quality speech compression at variable bitrates. It consists of two primary innovations:
+- **ScheDFR** (`sched_dfr.py`): A DP-based dynamic frame rate inference scheduler.
+- **Melt-and-Cool** (`melt_manager.py`, `cool_manager.py`): A two-stage training recipe for adapting FFR models to DFR.
 
-Paper PDF lives in `papers/codecslime_2506.21074.pdf`.
+## Repository Structure
 
-## Repository layout
-
-```
+```text
 backbones/
   scripts/        Python entry points (train / eval / data prep)
   configs/        Hydra YAMLs (model + train + entry points)
   slurm/          SLURM launchers
-  checkpoints/    Trained model weights (gitignored, ~14 TB)
+  checkpoints/    Trained model weights (gitignored)
   data/           Manifests: librispeech_*.txt, unicats_b.txt
   results/        Reconstructed audio + metrics per evaluation run
-datasets/         LibriSpeech, LibriTTS (gitignored)
-external/BigCodec Vendored backbone (gitignored, commit pinned)
-papers/           Paper PDF + LaTeX source
+datasets/         Directory for LibriSpeech and LibriTTS datasets (gitignored)
+external/BigCodec Vendored BigCodec backbone (gitignored, commit pinned)
+docs/             Additional documentation and training plans
+papers/           The original CodecSlime paper PDF + LaTeX source
 ```
 
-## Setup
+## Setup Instructions
+
+### 1. Setup BigCodec Backbone
+
+The BigCodec backbone is vendored in `external/BigCodec`. To populate the remaining backbone files from the upstream repository (using the commit pinned in `external/BIGCODEC_COMMIT.txt`) without overwriting existing project-specific modifications:
 
 ```bash
-# Activate the conda env (CUDA path; n-210 AMD uses a separate cs_amd env)
-source /home/morg/students/dortirosh/envs/codecslime/bin/activate
+# Clone upstream to a temporary location
+git clone https://github.com/m-m-y/BigCodec.git external/BigCodec_upstream
+cd external/BigCodec_upstream
+git checkout $(cat ../BIGCODEC_COMMIT.txt)
+cd ../..
 
-# Install eval metric backends (if missing)
+# Merge upstream files into local directory (no-clobber)
+cp -rn external/BigCodec_upstream/* external/BigCodec/
+rm -rf external/BigCodec_upstream
+```
+
+### 2. Environment Setup
+
+Create a virtual environment and install the required dependencies.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Reproduction workflow
+*Note: For AMD/ROCm users (e.g., node n-210), refer to `docs/n210_amd_setup.md` for specific environment instructions.*
 
-All commands run from the repo root.
+### 3. Data Preparation
 
-### Stage 1: Backbone FFR training
+Download and prepare the LibriSpeech (for training) and LibriTTS (for evaluation) datasets.
 
-Train the BigCodec backbone at fixed 80 Hz frame rate (paper Section 3.1).
-Outputs land in `backbones/checkpoints/{vq8k,fsq18k}-300k/`.
+```bash
+# Download and prepare datasets
+python backbones/scripts/prepare_librispeech.py --root datasets
+python backbones/scripts/prepare_libritts.py --root datasets --subsets test-clean
+
+# Build the UniCATS testset B manifest (500 utts, 37 unseen speakers)
+python backbones/scripts/prepare_unicats_b.py --out-dir backbones/data
+```
+
+## Reproduction Workflow
+
+Note currently the account in the slurm files uses a placeholder:
+```
+--account=<your_account>
+```
+Please update it to the currect one
+
+### Stage 1: Backbone Training (FFR)
+
+Train the BigCodec backbone at a fixed 80 Hz frame rate.
 
 ```bash
 sbatch backbones/slurm/train_vq8k.slurm
 sbatch backbones/slurm/train_fsq18k.slurm
 ```
 
-### Stage 2: Melt post-training (Section 2.3 of paper)
+### Stage 2: Melt Post-Training
 
-Random-rate downsampling curriculum (`MeltManager`). Pretrains the codec to
-tolerate arbitrary segment lengths, producing a DFR-foundation model.
+Apply the random-rate downsampling curriculum (`MeltManager`) to train the model to tolerate arbitrary segment lengths.
 
 ```bash
-# L40s killable, batch 16, 100k steps (paper-literal LR)
+# L40s cluster, batch 16, 100k steps (paper-literal LR)
 sbatch backbones/slurm/train_melt_vq8k.slurm
 sbatch backbones/slurm/train_melt_fsq18k.slurm
 
-# AMD n-210, batch 64, 12.5k steps (sqrt-scaled LR)
+# AMD n-210 cluster, batch 64, 12.5k steps (sqrt-scaled LR)
 sbatch backbones/slurm/train_melt_vq8k_n210.slurm
 sbatch backbones/slurm/train_melt_fsq18k_n210.slurm
 ```
 
-### Stage 3: Cool fine-tuning (Section 2.3 of paper)
+### Stage 3: Cool Fine-Tuning
 
-Encoder frozen; quantizer + decoder fine-tuned with ScheDFR enabled per step
-(`CoolManager`). Two pipelines:
+Fine-tune the quantizer and decoder with ScheDFR enabled while freezing the encoder.
 
-- Cool from backbone (paper Table 3 ablation row "+Cool only"):
-  ```bash
-  sbatch backbones/slurm/train_cool_vq8k.slurm
-  ```
-  Output: `backbones/checkpoints/cool-vq8k-from-backbone-100k/`.
+```bash
+# Standard pipeline (Full Melt+Cool)
+sbatch backbones/slurm/train_cool_vq8k_n210.slurm
+sbatch backbones/slurm/train_cool_fsq18k_n210.slurm
 
-- Cool on top of Melt (the full Melt+Cool pipeline, paper Table 1 row
-  "CodecSlime"):
-  ```bash
-  sbatch backbones/slurm/train_cool_vq8k_from_backbone_n210.slurm
-  sbatch backbones/slurm/train_cool_vq8k_n210.slurm
-  sbatch backbones/slurm/train_cool_fsq18k_n210.slurm
-  ```
-  Output: `backbones/checkpoints/cool-{vq8k,fsq18k}-n210-12500/`.
+# Ablation: Cool from backbone only (no Melt)
+sbatch backbones/slurm/train_cool_vq8k.slurm
+```
 
 ### Stage 4: Evaluation
 
-Single end-to-end script: `backbones/scripts/evaluate_codec.py`. Generates the
-reconstruction and computes WER, STOI, PESQ, SECS, UTMOS plus a bitrate
-accounting, all in one invocation. Defaults match paper Table 1 (Rs=2, U=4).
+Evaluate models using the `evaluate_codec.py` script. It computes WER, STOI, PESQ, SECS, and UTMOS.
 
 ```bash
-# One cell, e.g. the full CodecSlime on FSQ-18k (Melt+Cool n210):
 python backbones/scripts/evaluate_codec.py \
     --ckpt backbones/checkpoints/cool-fsq18k-n210-12500/last.ckpt \
     --manifest backbones/data/unicats_b.txt \
@@ -100,89 +123,49 @@ python backbones/scripts/evaluate_codec.py \
     --codebook-size 18225 --whisper-model base
 ```
 
-The slurm job array runs the full 12-cell matrix at once and skips missing
-checkpoints (Melt or Cool runs still training):
-
+Alternatively, run the full 12-cell evaluation matrix via SLURM:
 ```bash
 sbatch backbones/slurm/eval_codec.slurm
 ```
 
-Each cell writes `{fid}_orig.wav`, `{fid}_recon.wav`, optional `{fid}_ref.txt`
-(LibriTTS `.normalized.txt` transcript), `metrics_summary.json`, and
-`metrics.tsv` to `backbones/results/eval-<variant>/`.
+## Evaluation Matrix & Metrics
 
-#### Evaluation matrix
+### Matrix Variants
 
-| Variant (slurm idx) | Checkpoint dir | Mode | Codebook | Bitrate at Rs=2 |
-|---|---|---|---|---|
-| backbone-vq8k-ffr (0) | vq8k-300k | ffr | 8192 | 1040 bps |
-| backbone-vq8k-dfr (1) | vq8k-300k | dfr | 8192 | 600 bps |
-| melt-vq8k-l40s (2) | melt-vq8k-100k | dfr | 8192 | 600 bps |
-| melt-vq8k-n210 (3) | melt-vq8k-n210-12500 | dfr | 8192 | 600 bps |
-| cool-vq8k-l40s (4) | cool-vq8k-from-backbone-100k | dfr | 8192 | 600 bps |
-| meltcool-vq8k-n210 (5) | cool-vq8k-n210-12500 | dfr | 8192 | 600 bps |
-| backbone-fsq18k-ffr (6) | fsq18k-300k | ffr | 18225 | 1132 bps |
-| backbone-fsq18k-dfr (7) | fsq18k-300k | dfr | 18225 | 646 bps |
-| melt-fsq18k-l40s (8) | melt-fsq18k-100k | dfr | 18225 | 646 bps |
-| melt-fsq18k-n210 (9) | melt-fsq18k-n210-12500 | dfr | 18225 | 646 bps |
-| cool-fsq18k-l40s (10) | cool-fsq18k-from-backbone-100k | dfr | 18225 | 646 bps |
-| meltcool-fsq18k-n210 (11) | cool-fsq18k-n210-12500 | dfr | 18225 | 646 bps |
+| Variant | Mode | Codebook | Target Bitrate |
+|---|---|---|---|
+| backbone-vq8k-ffr | ffr | 8192 | 1040 bps |
+| backbone-vq8k-dfr | dfr | 8192 | 600 bps |
+| melt-vq8k-n210 | dfr | 8192 | 600 bps |
+| meltcool-vq8k-n210 | dfr | 8192 | 600 bps |
+| backbone-fsq18k-ffr | ffr | 18225 | 1132 bps |
+| meltcool-fsq18k-n210 | dfr | 18225 | 646 bps |
 
-Bitrate formula:
-`(log2(codebook) + ceil(log2(U))) * encoder_fr / mean_comp_ratio`, where the
-duration bits are 0 for FFR (`ceil(log2(U))=0` when U=1) and 2 for DFR with
-U=4. `mean_comp_ratio` averages near Rs=2 on real audio.
+*Refer to `backbones/results/final/all_metrics.md` for the full results.*
 
-### Data preparation
+**Bitrate Formula:** `(log2(codebook) + ceil(log2(U))) * encoder_fr / mean_comp_ratio`
 
-LibriSpeech (training) and LibriTTS test-clean (evaluation) are downloaded
-by helper scripts:
-
-```bash
-python backbones/scripts/prepare_librispeech.py --root datasets
-python backbones/scripts/prepare_libritts.py --root datasets --subsets test-clean
-
-# Build the UniCATS testset B manifest (500 utts, 37 unseen speakers)
-python backbones/scripts/prepare_unicats_b.py --out-dir backbones/data
-```
-
-The UniCATS-B script writes `backbones/data/unicats_b.txt` (manifest used by
-`evaluate_codec.py`) and `backbones/data/unicats_b_utt2prompt.txt` (verbatim
-upstream pair list, kept for traceability). Manifests live under
-`backbones/data/` which is gitignored; regenerate via the scripts above.
-
-## Metrics reported
+### Metrics Details
 
 | Metric | Direction | Backend | Notes |
 |---|---|---|---|
-| Bitrate | n/a | closed form | log2(codebook) + duration bits times encoder_fr / mean_comp_ratio |
-| WER | lower better | OpenAI Whisper (`base` default) | Paper uses NeMo FastConformer; absolute numbers will differ |
-| STOI | higher better | pystoi | Short-time objective intelligibility |
-| PESQ | higher better | pesq (mode='wb') | Perceptual speech quality at 16 kHz |
-| SECS | higher better | Resemblyzer (paper-faithful) | Speaker embedding cosine similarity |
-| UTMOS | higher better | tarepan/SpeechMOS via torch.hub | Neural MOS predictor |
+| Bitrate | n/a | Closed form | Includes duration bits for DFR |
+| WER | lower better | OpenAI Whisper (`base`) | Transcription accuracy |
+| STOI | higher better | pystoi | Intelligibility |
+| PESQ | higher better | pesq (wb) | Perceptual quality (16 kHz) |
+| SECS | higher better | Resemblyzer | Speaker similarity |
+| UTMOS | higher better | SpeechMOS | Neural MOS predictor |
 
-ViSQOL is not computed (no install path); the STOI + PESQ + UTMOS combination
-covers the same intelligibility / perceptual dimensions. WER uses Whisper
-instead of the paper's NeMo FastConformer-Transducer-Large; rank within the
-matrix is comparable but absolute Table 1 numbers will not match.
+## SLURM Cluster Notes
 
-## SLURM cluster notes
-
-| Node class | Partition | Time | GPU type |
+| Node Class | Partition | Time | GPU Type |
 |---|---|---|---|
-| t-100 (H100 80 GB) | gpu-morgeva | 5 days | gpu:h100:1 |
-| n-801..805 (L40s 48 GB) | killable | 1 day | gpu:l40s:1 |
-| n-210 (AMD MI300X, ROCm) | gpu-morgeva | 12 h | gpu:1 |
+| t-100 | gpu-morgeva | 5 days | gpu:h100:1 |
+| n-801..805 | killable | 1 day | gpu:l40s:1 |
+| n-210 | gpu-morgeva | 12 h | gpu:amd:1 |
 
-Always use `--account=gpu-research`. n-210 jobs need the `cs_amd` venv
-(`/home/morg/students/dortirosh/envs/cs_amd`); everything else uses
-`codecslime`.
+Use `--account=gpu-research` for all jobs. 
 
-## Final deliverables (course)
+## Contributing
 
-- `project.pdf`: max 5 pages, top of page 1 lists each group member's name
-  and ID number. Compiled in Overleaf.
-- `project_code.zip`: Python 3.10; `requirements.txt`; `readme.txt` with the
-  exact train + eval commands; audio samples from both train and validation
-  splits.
+This project was developed as part of a TAU course final project. For more details on implementation decisions, see the documentation in the `docs/` folder.

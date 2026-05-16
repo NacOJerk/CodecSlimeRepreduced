@@ -1,8 +1,11 @@
 """CodecDecoder must accept quantizer_type='fsq' and produce expected shapes."""
 import sys
-import torch
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec")
+from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "external" / "BigCodec"))
+
+import torch
 from vq.codec_decoder import CodecDecoder
 
 

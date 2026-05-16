@@ -2,14 +2,23 @@
 # 100-step single-GPU sanity run. Validates the full plumbing.
 set -euo pipefail
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derive REPO root (assuming depth of 2: backbones/scripts/ or backbones/slurm/)
+REPO="$(cd "$SCRIPT_DIR/../../" && pwd)"
+
+# VENV should be activated by the user or set via environment variable
+VENV="${VENV:-$REPO/.venv}"
+if [ -d "$VENV" ]; then
+    export PATH="$VENV/bin:$PATH"
+    export VIRTUAL_ENV="$VENV"
+fi
+
 BIGCODEC=$REPO/external/BigCodec
 CONFIG_NAME=${1:-codecslime_vq8k}
 RUN_NAME=${2:-smoke-${CONFIG_NAME}}
 
-VENV=/home/morg/students/dortirosh/envs/codecslime
-export PATH=$VENV/bin:${PATH:-}
-export VIRTUAL_ENV=$VENV
+# VENV should be activated by the user
 export PYTHONPATH=$BIGCODEC:${PYTHONPATH:-}
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 

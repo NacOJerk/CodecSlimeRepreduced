@@ -8,7 +8,7 @@ def log(msg: str) -> None:
     print(msg, flush=True)
 
 
-REPO_ROOT = Path("/home/morg/students/dortirosh/audio_ml_tau_final")
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def main():

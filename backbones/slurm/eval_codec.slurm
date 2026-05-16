@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=cs-eval-codec
-#SBATCH --output=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%A_%a.out
-#SBATCH --error=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%A_%a.err
+#SBATCH --output=backbones/slurm/logs/%x_%A_%a.out
+#SBATCH --error=backbones/slurm/logs/%x_%A_%a.err
 #SBATCH --partition=killable
-#SBATCH --account=gpu-research
+#SBATCH --account=<your_account>
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:l40s:1
@@ -12,12 +12,19 @@
 #SBATCH --time=4:00:00
 #SBATCH --array=0-11
 
-# Evaluates the full backbone x stage x mode matrix on UniCATS testset B.
-# Each task index runs one (ckpt, mode) cell. Missing checkpoints are skipped
-# with exit 0 so the array tolerates Melt / Cool runs that have not finished.
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derive REPO root (assuming depth of 2: backbones/scripts/ or backbones/slurm/)
+REPO="$(cd "$SCRIPT_DIR/../../" && pwd)"
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
-PYBIN=/home/morg/students/dortirosh/envs/codecslime/bin/python
+# VENV should be activated by the user or set via environment variable
+VENV="${VENV:-$REPO/.venv}"
+if [ -d "$VENV" ]; then
+    export PATH="$VENV/bin:$PATH"
+    export VIRTUAL_ENV="$VENV"
+fi
+
+mkdir -p "$REPO/backbones/slurm/logs"
 
 VARIANTS=(
   "backbone-vq8k-ffr      vq8k-300k                        ffr  8192"
@@ -44,13 +51,12 @@ if [ ! -f "$CKPT" ]; then
     exit 0
 fi
 
-mkdir -p "$REPO/backbones/slurm/logs"
 echo "[eval] variant=$VARIANT mode=$MODE codebook=$CODEBOOK ckpt=$CKPT"
 echo "[eval] out=$OUT"
 
 export PYTHONPATH=$REPO:$REPO/external/BigCodec:${PYTHONPATH:-}
 
-$PYBIN $REPO/backbones/scripts/evaluate_codec.py \
+python $REPO/backbones/scripts/evaluate_codec.py \
     --ckpt "$CKPT" \
     --manifest $REPO/backbones/data/unicats_b.txt \
     --audio-root $REPO/datasets/LibriTTS \

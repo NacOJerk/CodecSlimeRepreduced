@@ -16,7 +16,7 @@ import time
 import torch
 from omegaconf import OmegaConf
 
-REPO_ROOT = Path("/home/morg/students/dortirosh/audio_ml_tau_final")
+REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "external" / "BigCodec"))
 

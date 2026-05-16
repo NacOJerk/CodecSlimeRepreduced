@@ -11,13 +11,25 @@ RUN=$1
 shift
 EXTRA_ARGS=("$@")
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derive REPO root (assuming depth of 2: backbones/scripts/ or backbones/slurm/)
+REPO="$(cd "$SCRIPT_DIR/../../" && pwd)"
+
+# VENV should be activated by the user or set via environment variable
+VENV="${VENV:-$REPO/.venv}"
+if [ -d "$VENV" ]; then
+    export PATH="$VENV/bin:$PATH"
+    export VIRTUAL_ENV="$VENV"
+fi
+
 BIGCODEC=$REPO/external/BigCodec
 LOG_DIR=$REPO/backbones/checkpoints/$RUN
 
-VENV=/home/morg/students/dortirosh/envs/cs_amd
-export PATH=$VENV/bin:${PATH:-}
-export VIRTUAL_ENV=$VENV
+# VENV should be activated by the user
+# VENV=<VENV_PATH>/cs_amd
+# export PATH=$VENV/bin:${PATH:-}
+# export VIRTUAL_ENV=$VENV
 export PYTHONPATH=$REPO:$BIGCODEC:${PYTHONPATH:-}
 export PYTHONUNBUFFERED=1
 

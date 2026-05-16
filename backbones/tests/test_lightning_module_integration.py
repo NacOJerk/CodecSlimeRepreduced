@@ -9,20 +9,20 @@ covers that integration.
 import sys
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "external" / "BigCodec"))
+
 import pytest
 from omegaconf import OmegaConf
-
-REPO = Path("/home/morg/students/dortirosh/audio_ml_tau_final")
-sys.path.insert(0, str(REPO / "external" / "BigCodec"))
-
 from lightning_module import CodecLightningModule
 
 
 def _build_cfg(model_yaml: str) -> OmegaConf:
     cfg = OmegaConf.create({})
-    cfg.model = OmegaConf.load(REPO / "backbones" / "configs" / "model" / f"{model_yaml}.yaml")
-    cfg.train = OmegaConf.load(REPO / "backbones" / "configs" / "train" / "codecslime_300k.yaml")
-    cfg.dataset = OmegaConf.load(REPO / "backbones" / "configs" / "dataset" / "librispeech.yaml")
+    cfg.model = OmegaConf.load(REPO_ROOT / "backbones" / "configs" / "model" / f"{model_yaml}.yaml")
+    cfg.train = OmegaConf.load(REPO_ROOT / "backbones" / "configs" / "train" / "codecslime_300k.yaml")
+    cfg.dataset = OmegaConf.load(REPO_ROOT / "backbones" / "configs" / "dataset" / "librispeech.yaml")
     cfg.preprocess = OmegaConf.create({"audio": {"sr": 16000}})
     return cfg
 
@@ -33,7 +33,7 @@ def _build_cfg(model_yaml: str) -> OmegaConf:
 ])
 def test_lightning_module_constructs(model_yaml, expected_quantizer, expected_codebook, monkeypatch):
     import hydra.utils
-    monkeypatch.setattr(hydra.utils, "get_original_cwd", lambda: str(REPO))
+    monkeypatch.setattr(hydra.utils, "get_original_cwd", lambda: str(REPO_ROOT))
     cfg = _build_cfg(model_yaml)
     lm = CodecLightningModule(cfg)
     decoder = lm.model["generator"]

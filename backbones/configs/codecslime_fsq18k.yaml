@@ -5,7 +5,7 @@ defaults:
   - train: codecslime_300k
   - _self_
 
-log_dir: /home/morg/students/dortirosh/audio_ml_tau_final/backbones/checkpoints/fsq18k-300k
+log_dir: backbones/checkpoints/fsq18k-300k
 debug: false
 ckpt: null
 input_dir: null
