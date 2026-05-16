@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=cs-melt-vq8k
-#SBATCH --output=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.out
-#SBATCH --error=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.err
+#SBATCH --output=backbones/slurm/logs/%x_%j.out
+#SBATCH --error=backbones/slurm/logs/%x_%j.err
 #SBATCH --partition=killable
-#SBATCH --account=gpu-research
+#SBATCH --account=<your_account>
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:l40s:1
@@ -12,7 +12,12 @@
 #SBATCH --time=1-00:00:00
 #SBATCH --signal=B:TERM@120
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derive REPO root (backbones/slurm/ -> root is ../../)
+REPO="$(cd "$SCRIPT_DIR/../../" && pwd)"
+
+mkdir -p "$REPO/backbones/slurm/logs"
 
 trap 'echo "[slurm] caught TERM, resubmitting"; sbatch $0; exit 0' TERM
 

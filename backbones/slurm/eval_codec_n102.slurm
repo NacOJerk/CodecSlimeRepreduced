@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=cs-eval-n102
-#SBATCH --output=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%A_%a.out
-#SBATCH --error=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%A_%a.err
+#SBATCH --output=backbones/slurm/logs/%x_%A_%a.out
+#SBATCH --error=backbones/slurm/logs/%x_%A_%a.err
 #SBATCH --partition=gpu-h100-killable
-#SBATCH --account=gpu-research
+#SBATCH --account=<your_account>
 #SBATCH --nodelist=n-102
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -15,10 +15,19 @@
 
 # 10-cell evaluation on UniCATS testset B (500 utts) targeting n-102 H100.
 # Backbones: ffr (80 Hz), fixed (40 Hz uniform 2-frame mean), dfr (40 Hz ScheDFR).
-# Melt n210 variants: fixed and dfr at 40 Hz only.
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derive REPO root (assuming depth of 2: backbones/scripts/ or backbones/slurm/)
+REPO="$(cd "$SCRIPT_DIR/../../" && pwd)"
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
-PYBIN=/home/morg/students/dortirosh/envs/codecslime/bin/python
+# VENV should be activated by the user or set via environment variable
+VENV="${VENV:-$REPO/.venv}"
+if [ -d "$VENV" ]; then
+    export PATH="$VENV/bin:$PATH"
+    export VIRTUAL_ENV="$VENV"
+fi
+
+mkdir -p "$REPO/backbones/slurm/logs"
 
 VARIANTS=(
   "backbone-vq8k-ffr80      vq8k-300k                ffr    8192"
@@ -61,7 +70,7 @@ echo "[eval] out=$OUT"
 
 export PYTHONPATH=$REPO:$REPO/external/BigCodec:${PYTHONPATH:-}
 
-$PYBIN $REPO/backbones/scripts/evaluate_codec.py \
+python $REPO/backbones/scripts/evaluate_codec.py \
     --ckpt "$CKPT" \
     --manifest $REPO/backbones/data/unicats_b.txt \
     --audio-root $REPO/datasets/LibriTTS \

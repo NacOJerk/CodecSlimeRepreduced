@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=cs-bench-dp-32cpu
-#SBATCH --output=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.out
-#SBATCH --error=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%j.err
+#SBATCH --output=backbones/slurm/logs/%x_%j.out
+#SBATCH --error=backbones/slurm/logs/%x_%j.err
 #SBATCH --partition=gpu-morgeva
-#SBATCH --account=gpu-research
+#SBATCH --account=<your_account>
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --nodelist=n-210
@@ -11,10 +11,19 @@
 #SBATCH --mem=32G
 #SBATCH --time=00:15:00
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
-VENV=/home/morg/students/dortirosh/envs/cs_amd
-export PATH=$VENV/bin:${PATH:-}
-export PYTHONPATH=$REPO:${PYTHONPATH:-}
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derive REPO root (assuming depth of 2: backbones/scripts/ or backbones/slurm/)
+REPO="$(cd "$SCRIPT_DIR/../../" && pwd)"
+
+# VENV should be activated by the user or set via environment variable
+VENV="${VENV:-$REPO/.venv}"
+if [ -d "$VENV" ]; then
+    export PATH="$VENV/bin:$PATH"
+    export VIRTUAL_ENV="$VENV"
+fi
+
+mkdir -p "$REPO/backbones/slurm/logs"
 
 # Honor the slurm allocation: most BLAS libs spawn their own thread pool.
 # joblib processes will multiply that. Force per-process thread count to 1

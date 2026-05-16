@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=cs-samples
-#SBATCH --output=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%A_%a.out
-#SBATCH --error=/home/morg/students/dortirosh/audio_ml_tau_final/backbones/slurm/logs/%x_%A_%a.err
+#SBATCH --output=backbones/slurm/logs/%x_%j.out
+#SBATCH --error=backbones/slurm/logs/%x_%j.err
 #SBATCH --partition=killable
-#SBATCH --account=gpu-research
+#SBATCH --account=<your_account>
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:l40s:1
@@ -18,8 +18,19 @@
 # /SECS are still cheap and stay on so the metrics_summary.json captures a
 # quick objective snapshot per sample.
 
-REPO=/home/morg/students/dortirosh/audio_ml_tau_final
-PYBIN=/home/morg/students/dortirosh/envs/codecslime/bin/python
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derive REPO root
+REPO="$(cd "$SCRIPT_DIR/../../" && pwd)"
+
+VENV="${VENV:-$REPO/.venv}"
+if [ -d "$VENV" ]; then
+    export PATH="$VENV/bin:$PATH"
+    export VIRTUAL_ENV="$VENV"
+fi
+
+mkdir -p "$REPO/backbones/slurm/logs"
+
 N_SAMPLES=5
 
 VARIANTS=(
@@ -54,7 +65,7 @@ echo "[samples] node=$(hostname) variant=$VARIANT mode=$MODE codebook=$CODEBOOK 
 
 export PYTHONPATH=$REPO:$REPO/external/BigCodec:${PYTHONPATH:-}
 
-$PYBIN $REPO/backbones/scripts/evaluate_codec.py \
+python $REPO/backbones/scripts/evaluate_codec.py \
     --ckpt "$CKPT" \
     --manifest $REPO/backbones/data/unicats_b.txt \
     --audio-root $REPO/datasets/LibriTTS \
