@@ -4,8 +4,8 @@ codec_encoder:
   use_rnn: True
   rnn_bidirectional: False
   rnn_num_layers: 2
-  up_ratios: [2, 2]
-  dilations: [1]
+  up_ratios: [2, 2, 2, 5, 5]
+  dilations: [1, 3, 9]
 
 codec_decoder:
   quantizer_type: vq
@@ -15,8 +15,8 @@ codec_decoder:
   use_rnn: True
   rnn_bidirectional: False
   rnn_num_layers: 2
-  up_ratios: [2, 2]
-  dilations: [1]
+  up_ratios: [5, 5, 2, 2, 2]
+  dilations: [1, 3, 9]
   vq_num_quantizers: 1
   vq_dim: 1024
   vq_commit_weight: 0.25
