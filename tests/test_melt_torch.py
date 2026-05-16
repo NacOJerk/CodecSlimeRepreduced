@@ -1,8 +1,10 @@
 """Tests for the torch-native rewrite of MeltManager.melt and the shared
 gradient-preserving apply helper _apply_mean_broadcast."""
+from pathlib import Path
 import sys
 
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 
 import pytest
 import torch

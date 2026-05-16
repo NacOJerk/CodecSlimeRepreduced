@@ -4,9 +4,11 @@ The DP itself is exercised indirectly. We mainly check that batched
 ``[B, C, T]`` input is handled, the apply re-engages autograd, and the
 output values match the paper's per-segment-mean recipe.
 """
+from pathlib import Path
 import sys
 
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 
 import math
 

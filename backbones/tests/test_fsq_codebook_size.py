@@ -1,6 +1,9 @@
 """FSQ with levels [3,3,3,3,3,3,5,5] should yield exactly 18225 codes."""
 import sys
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec")
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "external" / "BigCodec"))
 
 from vq.fsq_quantizer import FSQQuantizer
 

@@ -6,9 +6,11 @@ original triple-loop reference implementation that recomputes
 `_difference_loss` inside the innermost DP loop. Paper fidelity is the
 standing rule for this project.
 """
+from pathlib import Path
 import sys
 
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np
 import pytest

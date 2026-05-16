@@ -4,10 +4,12 @@ The full ``CoolMeltWrapper`` requires the BigCodec model graph and is
 covered by ``cool_smoke.py``. Here we test the strip helper directly with
 a dummy holder that mimics Lightning's hparam containers.
 """
+from pathlib import Path
 import sys
 
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final")
-sys.path.insert(0, "/home/morg/students/dortirosh/audio_ml_tau_final/external/BigCodec")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "external" / "BigCodec"))
 
 import pickle
 
