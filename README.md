@@ -156,15 +156,6 @@ sbatch backbones/slurm/eval_codec.slurm
 | SECS | higher better | Resemblyzer | Speaker similarity |
 | UTMOS | higher better | SpeechMOS | Neural MOS predictor |
 
-## SLURM Cluster Notes
-
-| Node Class | Partition | Time | GPU Type |
-|---|---|---|---|
-| t-100 | gpu-morgeva | 5 days | gpu:h100:1 |
-| n-801..805 | killable | 1 day | gpu:l40s:1 |
-| n-210 | gpu-morgeva | 12 h | gpu:amd:1 |
-
-Use `--account=gpu-research` for all jobs. 
 
 ## Audio Samples
 
